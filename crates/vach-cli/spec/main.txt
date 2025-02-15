@@ -72,11 +72,6 @@ vach keypair -o generated2.kp -s
 #    generated2.pk
 #    generated2.sk
 
-# Split an existing keypair into it's key
-vach split -i generated.kp
-#    generated.pk
-#    generated.sk
-
 # Pack and sign the data to check for integrity, using an existing keypair
 vach pack -o scripts.vach -i raycast.wasm matchmaking.wasm modloader.wasm -h -k generated.kp
 

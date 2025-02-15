@@ -31,25 +31,25 @@ impl Flags {
 
 	/// Construct a `Flags` struct from a `u32` number
 	#[inline(always)]
-	pub fn from_bits(bits: u32) -> Self {
+	pub const fn from_bits(bits: u32) -> Self {
 		Flags { bits }
 	}
 
 	/// Returns a copy of the underlying number.
 	#[inline(always)]
-	pub fn bits(&self) -> u32 {
+	pub const fn bits(&self) -> u32 {
 		self.bits
 	}
 
 	/// Create a new empty instance
 	#[inline(always)]
-	pub fn new() -> Self {
+	pub const fn new() -> Self {
 		Flags { bits: 0 }
 	}
 
 	/// Set a bit into the underlying [`u32`], will fail if set into the reserved mask.
 	/// The `toggle` parameter specifies whether to insert the flags (when true), or to pop the flag, (when false).
-	pub fn set(&mut self, bit: u32, toggle: bool) -> InternalResult<u32> {
+	pub const fn set(&mut self, bit: u32, toggle: bool) -> InternalResult<u32> {
 		if (Flags::RESERVED_MASK & bit) != 0 {
 			return Err(InternalError::RestrictedFlagAccessError);
 		} else {
@@ -59,7 +59,7 @@ impl Flags {
 		Ok(self.bits)
 	}
 
-	pub(crate) fn force_set(&mut self, mask: u32, toggle: bool) {
+	pub(crate) const fn force_set(&mut self, mask: u32, toggle: bool) {
 		if toggle {
 			self.bits |= mask;
 		} else {
@@ -69,7 +69,7 @@ impl Flags {
 
 	#[inline(always)]
 	/// Checks whether the given flag is set.
-	pub fn contains(&self, bit: u32) -> bool {
+	pub const fn contains(&self, bit: u32) -> bool {
 		(self.bits & bit) != 0
 	}
 }
@@ -81,7 +81,7 @@ impl fmt::Display for Flags {
 		let signed = if self.contains(Flags::SIGNED_FLAG) { 'S' } else { '-' };
 		let encrypted = if self.contains(Flags::ENCRYPTED_FLAG) { 'E' } else { '-' };
 
-		write!(f, "Flags[{}{}{}]", compressed, encrypted, signed)
+		write!(f, "Flags[{}{}{}] = {:>8X}", compressed, encrypted, signed, self.bits)
 	}
 }
 

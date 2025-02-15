@@ -185,14 +185,3 @@ vach keypair -s -o keypair.kp
 # -> keypair.pk
 # -> keypair.sk
 ```
-
-### 7: split
-
-> Splits an existing keypair into it's public and secret components
-
-```sh
-vach split -i keypair.kp
-
-# -> keypair.pk
-# -> keypair.sk
-```

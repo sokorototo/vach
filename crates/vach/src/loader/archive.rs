@@ -71,7 +71,7 @@ impl<T> Archive<T> {
 		let mut verified = false;
 
 		// Signature validation
-		// Validate signature only if a public key is passed with Some(PUBLIC_KEY)
+		// Validate signature only if a public key is present
 		#[cfg(feature = "crypto")]
 		if let Some(pk) = self.key {
 			// If there is an error the data is flagged as invalid
@@ -147,7 +147,6 @@ impl<T> Archive<T> {
 	}
 }
 
-// INFO: Record Based FileSystem: https://en.wikipedia.org/wiki/Record-oriented_filesystem
 impl<T> Archive<T>
 where
 	T: Seek + Read,

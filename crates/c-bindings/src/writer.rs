@@ -120,14 +120,16 @@ pub extern "C" fn add_leaf_from_file(
 }
 
 /// callback for each newly created leaf node, use `userdata` to pass extra data
-pub type v_builder_callback = extern "C" fn(
-	userdata: *mut ffi::c_void,
-	id: *const ffi::c_char,
-	id_len: usize,
-	bytes: *const ffi::c_char,
-	len: usize,
-	location: u64,
-);
+pub type v_builder_callback = Option<
+	extern "C" fn(
+		userdata: *mut ffi::c_void,
+		id: *const ffi::c_char,
+		id_len: usize,
+		bytes: *const ffi::c_char,
+		len: usize,
+		location: u64,
+	),
+>;
 
 /// process context and dump to a preallocated buffer, buffer must at least be big enough to fit data
 #[no_mangle]
@@ -143,24 +145,23 @@ pub extern "C" fn dump_archive_to_buffer(
 		return errors::report::<()>(error_p, errors::E_PARAMETER_IS_NULL) as _;
 	};
 
-	// check if callback is NULL
-	let mut cb = move |entry: &RegistryEntry, data: &[u8]| {
+	let mut wrapper = move |entry: &RegistryEntry, data: &[u8]| {
 		let id = entry.id.as_ref();
 
-		callback(
-			userdata,
-			id.as_ptr() as _,
-			id.len(),
-			data.as_ptr() as _,
-			data.len(),
-			entry.location,
-		)
+		if let Some(cb) = callback {
+			cb(
+				userdata,
+				id.as_ptr() as _,
+				id.len(),
+				data.as_ptr() as _,
+				data.len(),
+				entry.location,
+			)
+		}
 	};
 
-	let wrapper = ((callback as usize) == 0).then_some(&mut cb as _);
-
 	// write
-	match dump(target, leaves, config, wrapper) {
+	match dump(target, leaves, config, Some(&mut wrapper)) {
 		Ok(written) => written,
 		Err(e) => errors::v_error_to_id::<()>(error_p, e) as _,
 	}
@@ -182,25 +183,24 @@ pub extern "C" fn dump_leaves_to_file(
 		return errors::report::<()>(error_p, errors::E_PARAMETER_IS_NULL) as _;
 	};
 
-	// check if callback is NULL
-	let mut cb = |entry: &RegistryEntry, data: &[u8]| {
+	let mut wrapper = move |entry: &RegistryEntry, data: &[u8]| {
 		let id = entry.id.as_ref();
 
-		callback(
-			userdata,
-			id.as_ptr() as _,
-			id.len(),
-			data.as_ptr() as _,
-			data.len(),
-			entry.location,
-		)
+		if let Some(cb) = callback {
+			cb(
+				userdata,
+				id.as_ptr() as _,
+				id.len(),
+				data.as_ptr() as _,
+				data.len(),
+				entry.location,
+			)
+		}
 	};
-
-	let wrapper = ((callback as usize) == 0).then_some(&mut cb as _);
 
 	// write
 	let target = fs::File::create(path).unwrap();
-	match dump(target, leaves, config, wrapper) {
+	match dump(target, leaves, config, Some(&mut wrapper)) {
 		Ok(bytes_written) => bytes_written,
 		Err(e) => errors::v_error_to_id::<()>(error_p, e) as _,
 	}

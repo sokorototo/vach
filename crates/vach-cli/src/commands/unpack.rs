@@ -57,7 +57,7 @@ impl CommandTrait for Evaluator {
 		let file = File::open(input_path)?;
 		let mmap = unsafe { memmap2::Mmap::map(&file).expect("Unable to map file to memory") };
 		#[cfg(unix)]
-		mmap.advise(memmap2::Advice::Random);
+		mmap.advise(memmap2::Advice::Random).unwrap();
 		let cursor = Cursor::new(mmap.as_ref());
 
 		// load archive, with optional key

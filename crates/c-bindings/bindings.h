@@ -63,8 +63,8 @@ typedef struct v_resource {
 // Archive Builder Context
 typedef void v_builder_ctx;
 
-// Archive Builder Configuration, use `libffcall` to construct closures in C
-typedef void (*v_builder_callback)(const char *id, uintptr_t id_len, const char *data, uintptr_t len, uint64_t location);
+// callback for each newly created leaf node, use `userdata` to pass extra data
+typedef void (*v_builder_callback)(void *userdata, const char *id, uintptr_t id_len, const char *bytes, uintptr_t len, uint64_t location);
 
 // The version of the library
 uint16_t version(void);
@@ -109,7 +109,7 @@ void add_leaf_from_buffer(v_builder_ctx *ctx, const char *id, const uint8_t *dat
 void add_leaf_from_file(v_builder_ctx *ctx, const char *id, const char *path, uint32_t flags, int32_t *error_p);
 
 // process context and dump to a preallocated buffer, buffer must at least be big enough to fit data
-uint64_t dump_archive_to_buffer(v_builder_ctx *ctx, uint8_t *buffer, uintptr_t buf_size, v_builder_callback callback, int32_t *error_p);
+uint64_t dump_archive_to_buffer(v_builder_ctx *ctx, uint8_t *buffer, uintptr_t buf_size, v_builder_callback callback, void *userdata, int32_t *error_p);
 
 // processed context and write to a file on disk
-uint64_t dump_leaves_to_file(v_builder_ctx *ctx, const char *path, v_builder_callback callback, int32_t *error_p);
+uint64_t dump_leaves_to_file(v_builder_ctx *ctx, const char *path, v_builder_callback callback, void *userdata, int32_t *error_p);

@@ -4,7 +4,7 @@ set -xe
 
 # # Variables
 EXCLUDE=test.sh
-ARTIFACTS="keypair.sk keypair.pk keypair.kp signed.vach custom.vach encrypted.vach"
+ARTIFACTS="keypair.kp signed.vach custom.vach encrypted.vach"
 CMD="cargo run -qr --"
 
 # # Delete any previous artifacts
@@ -27,7 +27,7 @@ $CMD pack -o custom.vach -i GamerProfile.xml -x $EXCLUDE
 $CMD list -i custom.vach
 
 # # Generate an encrypted, signed and compressed archive
-$CMD pack -ea -o encrypted.vach -d lolcalt -c always -s keypair.sk
+$CMD pack -ea -o encrypted.vach -d lolcalt -c always -k keypair.kp
 $CMD list -i encrypted.vach
 
 # Unpack the encrypted archive

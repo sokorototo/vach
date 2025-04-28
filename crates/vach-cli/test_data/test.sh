@@ -20,7 +20,6 @@ cargo build --release
 $CMD pack --output signed.vach --directory-r ./ --compress-mode detect --compress-algo brotli --hash --exclude $EXCLUDE
 
 # # Split the resulting keypair
-$CMD split -i keypair.kp
 $CMD list -i signed.vach
 
 # # Generate a compressed archive

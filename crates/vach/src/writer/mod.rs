@@ -48,7 +48,7 @@ impl<W: Seek + Send> Seek for WriteCounter<W> {
 	}
 }
 
-/// iterates over all [`Leaf`], processes them and writes the output into the target.
+/// iterates over all [`Leaf`], processes them and writes the output into the target. returns bytes written to `target`
 pub fn dump<'a, W, R>(
 	target: W, leaves: &mut [Leaf<R>], config: &BuilderConfig,
 	mut callback: Option<&mut dyn FnMut(&RegistryEntry, &[u8])>,
@@ -233,5 +233,6 @@ where
 	target.seek(SeekFrom::Start(Header::BASE_SIZE as _))?;
 	target.write_all(&registry)?;
 
+	target.flush().unwrap();
 	Ok(target.bytes)
 }

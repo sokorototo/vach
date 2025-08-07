@@ -1,7 +1,6 @@
-#![cfg(test)]
 // This is meant to mirror as closely as possible, how users should use the crate
+#![cfg(test)]
 
-// Boring, average every day contemporary imports
 use std::{fs::File, str};
 use crate::prelude::*;
 
@@ -103,7 +102,7 @@ fn flags_set_intersects() {
 #[test]
 #[cfg(all(feature = "compression", feature = "builder"))]
 fn builder_no_signature() {
-	let build_config = BuilderConfig::default();
+	let config = BuilderConfig::default();
 
 	let mut poem_flags = Flags::default();
 	poem_flags
@@ -122,8 +121,10 @@ fn builder_no_signature() {
 	];
 
 	let mut target = File::create(SIMPLE_TARGET).unwrap();
-	let written = dump(&mut target, &mut leaves, &build_config, None).unwrap();
+	let mut count = 0usize;
+	let written = dump(&mut target, &mut leaves, &config, Some(&mut |_, _| count += 1)).unwrap();
 
+	assert_eq!(count, leaves.len(),);
 	assert_eq!(target.metadata().unwrap().len(), written);
 }
 
@@ -153,7 +154,7 @@ fn fetch_no_signature() -> InternalResult {
 #[test]
 #[cfg(all(feature = "builder", feature = "crypto"))]
 fn builder_with_signature() -> InternalResult {
-	let mut build_config = BuilderConfig::default();
+	let mut build_config = BuilderConfig::default().flags(Flags::from_bits(CUSTOM_FLAG_4));
 	build_config.load_keypair(KEYPAIR.as_slice())?;
 
 	let mut leaves = [
@@ -181,6 +182,11 @@ fn fetch_with_signature() -> InternalResult {
 	// open archive
 	let target = File::open(SIGNED_TARGET)?;
 	let mut archive = Archive::with_key(target, &vk)?;
+
+	assert!(
+		archive.flags().contains(CUSTOM_FLAG_4),
+		"Flags did not complete roundtrip"
+	);
 
 	let resource = archive.fetch_mut("bytez")?;
 	assert_eq!(resource.data.len(), 12);
@@ -219,8 +225,9 @@ fn decryptor_test() -> InternalResult {
 #[test]
 #[cfg(all(feature = "compression", feature = "builder", feature = "crypto"))]
 fn builder_with_encryption() -> InternalResult {
-	let mut build_config = BuilderConfig::default();
-	build_config.load_keypair(KEYPAIR.as_slice())?;
+	use crate::crypto_utils::read_keypair;
+
+	let build_config = BuilderConfig::default().keypair(read_keypair(KEYPAIR.as_slice())?);
 
 	let template = Leaf::default().encrypt(true).compress(CompressMode::Never).sign(true);
 	let mut leaves = leaves_from_dir("test_data", Some(&template))?;
@@ -228,6 +235,7 @@ fn builder_with_encryption() -> InternalResult {
 	leaves.push(
 		Leaf::new(File::open("test_data/poem.txt").unwrap(), "stitches.snitches")
 			.sign(false)
+			.encrypt(true)
 			.compression_algo(CompressionAlgorithm::Brotli(11))
 			.compress(CompressMode::Always),
 	);
@@ -254,10 +262,17 @@ fn fetch_from_encrypted() -> InternalResult {
 
 	// read data
 	let not_signed = archive.fetch_mut("stitches.snitches")?;
+	println!("Verifying Resource: {}", not_signed);
+
+	assert!(!not_signed.verified);
+	assert!(not_signed.flags.contains(Flags::COMPRESSED_FLAG));
+	assert!(not_signed.flags.contains(Flags::ENCRYPTED_FLAG));
+
 	let data = std::fs::read("test_data/poem.txt").unwrap();
 	assert_eq!(data.as_slice(), not_signed.data.as_ref());
 
 	let signed = archive.fetch_mut("quicksort.wasm")?;
+	println!("Verifying Resource: {}", signed);
 
 	assert_eq!(signed.data.len(), 106537);
 	assert!(signed.verified);
@@ -270,7 +285,7 @@ fn fetch_from_encrypted() -> InternalResult {
 #[test]
 #[cfg(all(feature = "builder", feature = "archive", feature = "crypto"))]
 fn consolidated_test() -> InternalResult {
-	use crate::crypto_utils::{gen_keypair, read_keypair};
+	use crate::crypto_utils::{gen_keypair, read_keypair, read_secret_key};
 	use std::{io::Cursor, time::Instant};
 
 	let mut target = Cursor::new(vec![]);
@@ -285,7 +300,7 @@ fn consolidated_test() -> InternalResult {
 	let keypair_bytes = keypair.to_keypair_bytes();
 
 	let mut config = BuilderConfig::default();
-	config.load_keypair(keypair_bytes.as_slice()).unwrap();
+	config.signing_key = read_secret_key(&keypair_bytes[..ed25519_dalek::SECRET_KEY_LENGTH]).ok();
 
 	// Add data
 	let template = Leaf::<&'static [u8]>::default().encrypt(true).version(59).sign(true);
@@ -297,7 +312,7 @@ fn consolidated_test() -> InternalResult {
 
 	// Dump data
 	let then = Instant::now();
-	dump(&mut target, &mut leaves, &config, None)?;
+	let written = dump(&mut target, &mut leaves, &config, None)?;
 
 	// Just because
 	println!("Building took: {:?}", then.elapsed());
@@ -319,7 +334,11 @@ fn consolidated_test() -> InternalResult {
 	assert_eq!(archive.fetch_mut("d2")?.data.as_ref(), data_2);
 	assert_eq!(archive.fetch_mut("d3")?.data.as_ref(), data_3);
 
-	println!("Fetching took: {:?} on average", then.elapsed() / 3);
+	println!("Fetching took: {:?} on average on {}", then.elapsed() / 3, archive);
+
+	// extract inner from archive
+	let inner = archive.into_inner().unwrap();
+	assert_eq!(inner.get_ref().len() as u64, written);
 
 	// All seems ok
 	Ok(())

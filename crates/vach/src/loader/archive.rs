@@ -55,13 +55,12 @@ impl<T> std::fmt::Display for Archive<T> {
 }
 
 impl<T> Archive<T> {
-	/// Consume the [Archive] and return the underlying handle
-	/// `None` if underlying
+	/// Consume the [`Archive`] and return the underlying source. Only valid if internal [`Mutex`] isn't poisoned
 	pub fn into_inner(self) -> Result<T, std::sync::PoisonError<T>> {
 		self.handle.into_inner()
 	}
 
-	// Decompress and|or decrypt the data
+	// Decompress and|or Decrypt some data
 	#[inline(never)]
 	fn process(&self, entry: &RegistryEntry, mut raw: Vec<u8>) -> InternalResult<(Vec<u8>, bool)> {
 		/* Literally the hottest function in the block (🕶) */

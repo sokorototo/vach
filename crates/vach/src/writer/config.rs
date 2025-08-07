@@ -11,7 +11,7 @@ pub struct BuilderConfig {
 	/// Number of threads to spawn during `Builder::dump`, defaults to 4
 	#[cfg(feature = "multithreaded")]
 	pub num_threads: NonZeroUsize,
-	/// Flags to be written into the `Header` section of the archive.
+	/// Singleton flags to be written into the `Header` section of the archive.
 	pub flags: Flags,
 	/// An optional private key. If one is provided, then the archive will have signatures.
 	#[cfg(feature = "crypto")]

@@ -30,7 +30,7 @@ impl CommandTrait for Evaluator {
 		// log basic metadata
 		println!("{}", archive);
 
-		let mut entries: Vec<_> = archive.entries().iter().map(|(_, entry)| entry).collect();
+		let mut entries = archive.entries().values().collect::<Vec<_>>();
 
 		// Sort the entries accordingly
 		match args.value_of(key_names::SORT) {
@@ -38,7 +38,10 @@ impl CommandTrait for Evaluator {
 			Some("alphabetical-reversed") => entries.sort_by(|a, b| b.id.cmp(&a.id)),
 			Some("size-ascending") => entries.sort_by(|a, b| a.offset.cmp(&b.offset)),
 			Some("size-descending") => entries.sort_by(|a, b| b.offset.cmp(&a.offset)),
-			Some(sort) => anyhow::bail!("Unknown sort option provided: {}. Valid sort types are: 'alphabetical' 'alphabetical-descending' 'size-ascending' 'size-descending'", sort),
+			Some(sort) => anyhow::bail!(
+				"Unknown sort option provided: {}. Valid sort types are: 'alphabetical' 'alphabetical-descending' 'size-ascending' 'size-descending'",
+				sort
+			),
 			_ => (),
 		};
 

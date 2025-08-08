@@ -134,9 +134,8 @@ impl CommandTrait for Evaluator {
 		// get jobs
 		let num_threads = args
 			.value_of(key_names::JOBS)
-			.map(|v| v.parse::<usize>().ok())
-			.flatten()
-			.unwrap_or(num_cpus::get());
+			.and_then(|v| v.parse::<usize>().ok())
+			.unwrap_or_else(|| num_cpus::get());
 
 		// combine leaf input-template
 		let template = Leaf::<&'static [u8]>::default()
@@ -188,7 +187,7 @@ impl CommandTrait for Evaluator {
 		if let Some(val) = args.values_of(key_names::INPUT) {
 			let iter = val
 				.map(PathBuf::from)
-				.filter(|f| path_filter(f))
+				.filter(path_filter)
 				.filter_map(FileAutoDropper::new)
 				.map(|l| l.template(&template));
 
@@ -203,7 +202,7 @@ impl CommandTrait for Evaluator {
 						.max_depth(1)
 						.into_iter()
 						.map(|v| v.unwrap().into_path())
-						.filter(|f| path_filter(f))
+						.filter(path_filter)
 						.filter_map(FileAutoDropper::new)
 						.map(|l| l.template(&template))
 				})
@@ -239,11 +238,13 @@ impl CommandTrait for Evaluator {
 		// setup progress bar and callback to update it
 		let progress = ProgressBar::new(leaves.len() as _);
 		progress.set_style(
-					ProgressStyle::default_bar()
-						.template(super::PROGRESS_BAR_STYLE)?
-						.progress_chars("█░-")
-						.tick_chars("⢀ ⡀ ⠄ ⢂ ⡂ ⠅ ⢃ ⡃ ⠍ ⢋ ⡋ ⠍⠁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⢈⠩⡀⢙⠄⡙⢂⠩⡂⢘⠅⡘⢃⠨⡃⢐⠍⡐⢋⠠⡋⢀⠍⡁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⠈⠩ ⢙ ⡙ ⠩ ⢘ ⡘ ⠨ ⢐ ⡐ ⠠ ⢀ ⡀"),
-				);
+			ProgressStyle::default_bar()
+				.template(super::PROGRESS_BAR_STYLE)?
+				.progress_chars("█░-")
+				.tick_chars(
+					"⢀ ⡀ ⠄ ⢂ ⡂ ⠅ ⢃ ⡃ ⠍ ⢋ ⡋ ⠍⠁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⢈⠩⡀⢙⠄⡙⢂⠩⡂⢘⠅⡘⢃⠨⡃⢐⠍⡐⢋⠠⡋⢀⠍⡁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⠈⠩ ⢙ ⡙ ⠩ ⢘ ⡘ ⠨ ⢐ ⡐ ⠠ ⢀ ⡀",
+				),
+		);
 
 		// increments progress-bar by one for each entry
 		let mut callback = |entry: &RegistryEntry, _: &[u8]| {

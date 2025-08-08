@@ -51,7 +51,7 @@ impl BuilderConfig {
 	}
 }
 
-impl<'a> Default for BuilderConfig {
+impl Default for BuilderConfig {
 	fn default() -> BuilderConfig {
 		BuilderConfig {
 			#[cfg(feature = "multithreaded")]

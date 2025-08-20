@@ -17,7 +17,7 @@ echo "Starting vach-cli tests..."
 cargo build --release
 
 # # Create simple archive with simple input, no compression only signatures
-$CMD pack --output signed.vach --recursive ./ --c-mode detect --c-algo brotli --sign --exclude $EXCLUDE
+$CMD pack --output signed.vach --recursive ./ --c-mode auto --c-algo brotli --sign --exclude $EXCLUDE
 
 # # Split the resulting keypair
 $CMD list -i signed.vach

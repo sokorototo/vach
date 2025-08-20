@@ -6,7 +6,7 @@ authors = [
 	"Jasper Fortuin <zeskeertwee@gmail.com>",
 	"Newton Toto <nyachiengatoto@gmail.com>",
 ]
-description = "A command-line tool to work with .vach files"
+description = "A command-line tool to work with vach archive files and streams"
 license = "MIT"
 repository = "https://github.com/zeskeertwee/vach"
 categories = ["command-line-utilities", "encoding", "game-development"]
@@ -20,11 +20,11 @@ path = "src/main.rs"
 
 [dependencies]
 vach = { version = "0.7", features = ["all"] }
+clap = { version = "4", features = ["derive"] }
 num_cpus = "1"
-clap = "3.1.15"
-indicatif = "0.17"
+indicatif = "0.18"
 anyhow = "1"
-tabled = "0.18"
+tabled = "0.20"
 walkdir = "2"
 tempfile = "3"
 memmap2 = "0.9.5"

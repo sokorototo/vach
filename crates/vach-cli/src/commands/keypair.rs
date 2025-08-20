@@ -1,32 +1,37 @@
+use std::borrow::Cow;
+
 use vach::crypto_utils::gen_keypair;
-
-use crate::utils;
-use crate::keys::key_names;
-
-use super::CommandTrait;
+use crate::{utils, cli};
 
 // Default keypair write destination
 const DEFAULT_KEYPAIR_FILE_NAME: &str = "keypair.kp";
-pub const VERSION: &str = "0.0.1";
 
 /// This command is used to generate keypair
-pub struct Evaluator;
+pub struct Subcommand;
 
-impl CommandTrait for Evaluator {
-	fn evaluate(&self, args: &clap::ArgMatches) -> anyhow::Result<()> {
-		let mut output_path = match args.value_of(key_names::OUTPUT) {
-			Some(path) => path.to_string(),
-			None => DEFAULT_KEYPAIR_FILE_NAME.to_string(),
+impl super::CommandTrait for Subcommand {
+	fn version() -> &'static str {
+		"0.2"
+	}
+
+	fn evaluate(&self, args: cli::CommandLine) -> anyhow::Result<()> {
+		let cli::Command::GenKeypair { output, split_key } = args.command else {
+			anyhow::bail!("Wrong implementation invoked for subcommand")
+		};
+
+		let output_path = match &output {
+			Some(path) => path.to_string_lossy(),
+			None => Cow::Borrowed(DEFAULT_KEYPAIR_FILE_NAME),
 		};
 
 		let kp = gen_keypair();
-		if args.is_present(key_names::SPLIT_KEY) {
-			output_path = output_path.trim_end_matches(".kp").to_string();
+		if split_key {
+			let trimmed = output_path.trim_end_matches(".kp");
 
-			let mut sk_path = output_path.clone();
+			let mut sk_path = trimmed.to_string();
 			sk_path.push_str(".sk");
 
-			let mut pk_path = output_path;
+			let mut pk_path = trimmed.to_string();
 			pk_path.push_str(".pk");
 
 			utils::create_and_write_to_file(&sk_path, &kp.to_bytes())?;

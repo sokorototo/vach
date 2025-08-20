@@ -1,20 +1,17 @@
 use std::{
+	collections::HashSet,
 	fs::File,
 	io::{self, Read, Write},
+	path::PathBuf,
 };
-use std::path::PathBuf;
-use std::collections::HashSet;
 
 use tempfile::NamedTempFile;
-use vach::prelude::*;
-use vach::crypto_utils;
+use vach::{crypto_utils, prelude::*};
 use indicatif::{ProgressBar, ProgressStyle};
 use walkdir;
 
 use super::CommandTrait;
-use crate::keys::key_names;
-
-pub const VERSION: &str = "0.0.5";
+use crate::{cli};
 
 struct FileAutoDropper(PathBuf, Option<File>);
 
@@ -51,77 +48,71 @@ impl Read for FileAutoDropper {
 }
 
 /// This command verifies the validity and integrity of an archive
-pub struct Evaluator;
+pub struct Subcommand;
 
-impl CommandTrait for Evaluator {
-	fn evaluate(&self, args: &clap::ArgMatches) -> anyhow::Result<()> {
+impl CommandTrait for Subcommand {
+	fn version() -> &'static str {
+		"0.6"
+	}
+
+	fn evaluate(&self, args: cli::CommandLine) -> anyhow::Result<()> {
 		// 1: Assemble Input Settings
-
-		// get output path
-		let output_path = match args.value_of(key_names::OUTPUT) {
-			Some(path) => path,
-			None => anyhow::bail!("Please provide an output path using the -o or --output key"),
+		let cli::Command::Pack {
+			output,
+			files,
+			directories,
+			recursive_directories,
+			exclude,
+			compress_mode,
+			compression_algorithm,
+			sign,
+			version,
+			flags,
+			jobs,
+			encrypt,
+			keypair,
+			private_key,
+		} = args.command
+		else {
+			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};
 
-		// get flags
-		let flags = match args.value_of(key_names::FLAGS) {
-			Some(magic) => Flags::from_bits(magic.parse::<u32>()?),
-			None => Flags::default(),
-		};
+		let flags = flags.clone().map(Flags::from_bits).unwrap_or_default();
+		let version = version.unwrap_or(0);
 
-		// get content_version
-		let version: u8 = match args.value_of(key_names::VERSION) {
-			Some(version) => version.parse()?,
-			None => 0,
-		};
+		let compress_mode = compress_mode
+			.map(|c| match c {
+				cli::CompressModeSetting::Always => CompressMode::Always,
+				cli::CompressModeSetting::Never => CompressMode::Never,
+				cli::CompressModeSetting::Auto => CompressMode::Detect,
+			})
+			.unwrap_or_default();
 
-		// get compress mode
-		let mut compress_mode = CompressMode::default();
-		if let Some(value) = args.value_of(key_names::COMPRESS_MODE) {
-			compress_mode = match value.to_lowercase().as_str() {
-				"always" => CompressMode::Always,
-				"detect" => CompressMode::Detect,
-				"never" => CompressMode::Never,
-				invalid_value => {
-					anyhow::bail!("{} is an invalid value for COMPRESS_MODE", invalid_value)
-				},
-			}
-		};
-
-		// get compression algorithm
-		let mut compression_algo = CompressionAlgorithm::default();
-		if let Some(value) = args.value_of(key_names::COMPRESS_ALGO) {
-			compression_algo = match value.to_lowercase().as_str() {
-				"lz4" => CompressionAlgorithm::LZ4,
-				"brotli" => CompressionAlgorithm::Brotli(8),
-				"snappy" => CompressionAlgorithm::Snappy,
-				invalid_value => {
-					anyhow::bail!("{} is an invalid value for COMPRESS_ALGO", invalid_value)
-				},
-			}
-		};
-
-		// get crypto settings
-		let encrypt = args.is_present(key_names::ENCRYPT);
-		let hash = args.is_present(key_names::HASH);
+		let compression_algo = compression_algorithm
+			.map(|a| match a {
+				cli::CompressionAlgorithmSetting::LZ4 => CompressionAlgorithm::LZ4,
+				cli::CompressionAlgorithmSetting::Snappy => CompressionAlgorithm::Snappy,
+				cli::CompressionAlgorithmSetting::Brotli => CompressionAlgorithm::Brotli(9),
+			})
+			.unwrap_or_default();
 
 		// get signing_key
-		let mut signing_key = match args.value_of(key_names::SECRET_KEY) {
+		let mut signing_key = match private_key {
 			Some(path) => {
 				let file = File::open(path)?;
 				Some(crypto_utils::read_secret_key(file)?)
 			},
-			None => match args.value_of(key_names::SECRET_KEY) {
+			None => match keypair {
 				Some(path) => {
 					let file = File::open(path)?;
-					Some(crypto_utils::read_secret_key(file)?)
+					Some(crypto_utils::read_keypair(file)?)
 				},
 				None => None,
 			},
 		};
 
 		// If encrypt is true, and no keypair was found: Generate and write a new keypair to a file
-		if (encrypt || hash) && signing_key.is_none() {
+		if (encrypt || sign) && signing_key.is_none() {
 			let generated = crypto_utils::gen_keypair();
 
 			let mut file = File::create("keypair.kp")?;
@@ -131,40 +122,31 @@ impl CommandTrait for Evaluator {
 			signing_key = Some(generated);
 		}
 
-		// get jobs
-		let num_threads = args
-			.value_of(key_names::JOBS)
-			.and_then(|v| v.parse::<usize>().ok())
-			.unwrap_or_else(|| num_cpus::get());
-
 		// combine leaf input-template
 		let template = Leaf::<&'static [u8]>::default()
 			.compress(compress_mode)
 			.compression_algo(compression_algo)
 			.encrypt(encrypt)
-			.sign(hash)
-			.version(version);
+			.sign(sign)
+			.version(version as u8);
 
 		// 2: Assemble input files
 		let mut leaves = vec![];
 
 		// Extract entries to be excluded
-		let excludes = match args.values_of(key_names::EXCLUDE) {
+		let excludes = match exclude {
 			Some(val) => val
-				.filter_map(|f| {
-					let path = PathBuf::from(f);
-
-					match path.canonicalize() {
-						Ok(path) => Some(path),
-						Err(err) => {
-							eprintln!(
-								"Failed to evaluate: {}. Skipping due to error: {}",
-								path.to_string_lossy(),
-								err
-							);
-							None
-						},
-					}
+				.iter()
+				.filter_map(|path| match path.canonicalize() {
+					Ok(path) => Some(path),
+					Err(err) => {
+						eprintln!(
+							"Failed to canonicalize: {}. Skipping due to error: {}",
+							path.to_string_lossy(),
+							err
+						);
+						None
+					},
 				})
 				.filter(|v| v.is_file())
 				.collect::<HashSet<PathBuf>>(),
@@ -184,9 +166,9 @@ impl CommandTrait for Evaluator {
 			},
 		};
 
-		if let Some(val) = args.values_of(key_names::INPUT) {
-			let iter = val
-				.map(PathBuf::from)
+		if let Some(f) = files {
+			let iter = f
+				.into_iter()
 				.filter(path_filter)
 				.filter_map(FileAutoDropper::new)
 				.map(|l| l.template(&template));
@@ -195,8 +177,9 @@ impl CommandTrait for Evaluator {
 		};
 
 		// Extract directory inputs
-		if let Some(val) = args.values_of(key_names::DIR_INPUT) {
+		if let Some(val) = directories {
 			let iter = val
+				.into_iter()
 				.map(|dir| {
 					walkdir::WalkDir::new(dir)
 						.max_depth(1)
@@ -212,8 +195,9 @@ impl CommandTrait for Evaluator {
 		};
 
 		// Extract recursive directory inputs
-		if let Some(val) = args.values_of(key_names::DIR_INPUT_REC) {
+		if let Some(val) = recursive_directories {
 			let iter = val
+				.into_iter()
 				.flat_map(|dir| walkdir::WalkDir::new(dir).into_iter())
 				.map(|v| v.unwrap().into_path())
 				.filter(|f| path_filter(f))
@@ -232,7 +216,7 @@ impl CommandTrait for Evaluator {
 		let config = BuilderConfig {
 			flags,
 			signing_key,
-			num_threads: num_threads.try_into().expect("Number of threads cannot be zero"),
+			num_threads: jobs.try_into().expect("Number of threads cannot be zero"),
 		};
 
 		// setup progress bar and callback to update it
@@ -255,11 +239,12 @@ impl CommandTrait for Evaluator {
 
 		// 4: Write
 		let bytes_written = dump(&mut temporary_file, &mut leaves, &config, Some(&mut callback))?;
-		temporary_file.persist(output_path)?;
+		temporary_file.persist(&output)?;
 
 		progress.println(format!(
 			"Generated a new archive @ {}; Bytes written: {}",
-			output_path, bytes_written
+			output.display(),
+			bytes_written
 		));
 
 		progress.finish();

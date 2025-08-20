@@ -1,7 +1,4 @@
-use std::path::PathBuf;
-use std::fs::File;
-use std::io::Write;
-use std::str::FromStr;
+use std::{fs::File, io::Write, path::PathBuf, str::FromStr};
 use anyhow::{Result, bail};
 
 pub fn create_and_write_to_file(path: &str, data: &[u8]) -> Result<()> {

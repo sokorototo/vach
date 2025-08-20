@@ -2,7 +2,6 @@ use std::{
 	fs::{self, File},
 	io::{Cursor, Read, Seek, Write},
 	path::PathBuf,
-	str::FromStr,
 	thread,
 	time::Instant,
 };
@@ -11,50 +10,48 @@ use vach::{crypto_utils, prelude::*};
 use indicatif::{ProgressBar, ProgressStyle};
 
 use super::CommandTrait;
-use crate::keys::key_names;
+use crate::cli;
 
-pub const VERSION: &str = "0.1.1";
+pub struct Subcommand;
 
-/// This command extracts an archive into the specified output folder
-pub struct Evaluator;
+impl CommandTrait for Subcommand {
+	fn version() -> &'static str {
+		"0.2"
+	}
 
-impl CommandTrait for Evaluator {
-	fn evaluate(&self, args: &clap::ArgMatches) -> anyhow::Result<()> {
-		let input_path = match args.value_of(key_names::INPUT) {
-			Some(path) => path,
-			None => anyhow::bail!("Please provide an input path using the -i or --input key"),
+	fn evaluate(&self, cli: cli::CommandLine) -> anyhow::Result<()> {
+		let cli::Command::Unpack {
+			input,
+			output,
+			keypair,
+			public_key,
+			jobs,
+		} = cli.command
+		else {
+			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};
 
-		let output_path = match args.value_of(key_names::OUTPUT) {
-			Some(path) => PathBuf::from_str(path)?,
-			None => Default::default(),
-		};
-
-		if output_path.is_file() {
+		if output.is_file() {
 			anyhow::bail!("Please provide a directory|folder path as the value of -o | --output")
 		};
 
 		// Attempting to extract a public key from a -p or -k input
-		let verifying_key = match args.value_of(key_names::KEYPAIR) {
+		let verifying_key = match keypair {
 			Some(path) => {
-				let file = match File::open(path) {
-					Ok(it) => it,
-					Err(err) => anyhow::bail!("IOError: {} @ {}", err, path),
-				};
-
+				let file = File::open(&path)?;
 				Some(crypto_utils::read_keypair(file)?.verifying_key())
 			},
-			None => match args.value_of(key_names::PUBLIC_KEY) {
+			None => match public_key {
 				Some(path) => {
-					let file = File::open(path)?;
+					let file = File::open(&path)?;
 					Some(crypto_utils::read_verifying_key(file)?)
 				},
 				None => None,
 			},
 		};
 
-		// load file into memory map, and init cursor
-		let file = File::open(input_path)?;
+		// memory map file, init cursor
+		let file = File::open(input)?;
 		let mmap = unsafe { memmap2::Mmap::map(&file).expect("Unable to map file to memory") };
 		#[cfg(unix)]
 		mmap.advise(memmap2::Advice::Random).unwrap();
@@ -78,14 +75,7 @@ impl CommandTrait for Evaluator {
 			},
 		};
 
-		let num_threads = args
-			.value_of(key_names::JOBS)
-			.map(|v| v.parse::<usize>().ok())
-			.flatten()
-			.filter(|s| *s > 0)
-			.unwrap_or(num_cpus::get());
-
-		extract_archive(&archive, num_threads, output_path)?;
+		extract_archive(&archive, jobs, output)?;
 		Ok(())
 	}
 }
@@ -110,7 +100,9 @@ fn extract_archive<T: Read + Seek + Send + Sync>(
 		ProgressStyle::default_bar()
 			.template(super::PROGRESS_BAR_STYLE)?
 			.progress_chars("█░-")
-			.tick_chars("⢀ ⡀ ⠄ ⢂ ⡂ ⠅ ⢃ ⡃ ⠍ ⢋ ⡋ ⠍⠁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⢈⠩⡀⢙⠄⡙⢂⠩⡂⢘⠅⡘⢃⠨⡃⢐⠍⡐⢋⠠⡋⢀⠍⡁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⠈⠩ ⢙ ⡙ ⠩ ⢘ ⡘ ⠨ ⢐ ⡐ ⠠ ⢀ ⡀"),
+			.tick_chars(
+				"⢀ ⡀ ⠄ ⢂ ⡂ ⠅ ⢃ ⡃ ⠍ ⢋ ⡋ ⠍⠁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⢈⠩⡀⢙⠄⡙⢂⠩⡂⢘⠅⡘⢃⠨⡃⢐⠍⡐⢋⠠⡋⢀⠍⡁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⠈⠩ ⢙ ⡙ ⠩ ⢘ ⡘ ⠨ ⢐ ⡐ ⠠ ⢀ ⡀",
+			),
 	);
 
 	// Extract all entries in parallel

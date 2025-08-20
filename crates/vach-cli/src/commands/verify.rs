@@ -2,21 +2,21 @@ use std::fs::File;
 use vach::archive::*;
 
 use super::CommandTrait;
-use crate::keys::key_names;
+use crate::cli;
 
-pub const VERSION: &str = "0.0.1";
+pub struct Subcommand;
 
-/// This command verifies the validity and integrity of an archive
-pub struct Evaluator;
+impl CommandTrait for Subcommand {
+	fn version() -> &'static str {
+		"0.2"
+	}
 
-impl CommandTrait for Evaluator {
-	fn evaluate(&self, args: &clap::ArgMatches) -> anyhow::Result<()> {
-		let input_path = match args.value_of(key_names::INPUT) {
-			Some(path) => path,
-			None => anyhow::bail!("Please provide an input path using the -i or --input key"),
+	fn evaluate(&self, cli: cli::CommandLine) -> anyhow::Result<()> {
+		let cli::Command::Verify { input } = cli.command else {
+			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};
 
-		let input_file = File::open(input_path)?;
+		let input_file = File::open(input)?;
 		if let Err(err) = Archive::new(input_file) {
 			match err {
 				InternalError::MalformedArchiveSource(m) => anyhow::bail!("Invalid Magic Sequence: {:?}", m),

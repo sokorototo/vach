@@ -23,7 +23,7 @@ $CMD pack --output signed.vach --recursive ./ --c-mode auto --c-algo brotli --si
 $CMD list -i signed.vach
 
 # # Generate a compressed archive
-$CMD pack -o custom.vach -i GamerProfile.xml
+$CMD pack -o custom.vach -i GamerProfile.xml bot.js
 $CMD list -i custom.vach
 
 # # Generate an encrypted, signed and compressed archive

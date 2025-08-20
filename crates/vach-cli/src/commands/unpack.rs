@@ -31,8 +31,15 @@ impl CommandTrait for Subcommand {
 			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};
 
-		if output.is_file() {
-			anyhow::bail!("Please provide a directory|folder path as the value of -o | --output")
+		let output = match output {
+			Some(path) => {
+				if path.is_file() {
+					anyhow::bail!("Please provide a directory|folder path as the value of -o | --output")
+				};
+
+				path
+			},
+			None => PathBuf::from(input.file_stem().unwrap()),
 		};
 
 		// Attempting to extract a public key from a -p or -k input

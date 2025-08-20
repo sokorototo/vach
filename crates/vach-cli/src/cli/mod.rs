@@ -45,7 +45,7 @@ pub enum Command {
 		input: PathBuf,
 		/// Directory to unpack to
 		#[arg(short, long, value_name = "DIR")]
-		output: PathBuf,
+		output: Option<PathBuf>,
 		/// Path to keypair to use for cryptographic operations
 		#[arg(short, long, value_name = "FILE")]
 		keypair: Option<PathBuf>,
@@ -103,12 +103,12 @@ pub enum Command {
 	/// Pack some files into a .vach archive
 	#[command(version = commands::pack::Subcommand::version())]
 	Pack {
+		/// Input files to include in the archive
+		#[arg(short = 'i', long)]
+		files: Option<Vec<PathBuf>>,
 		/// New archive will be output to this path
 		#[arg(short, long, value_name = "FILE")]
 		output: PathBuf,
-		/// Input files to include in the archive
-		#[arg(short, long)]
-		files: Option<Vec<PathBuf>>,
 		/// Includes files from these directories, non-recursively
 		#[arg(short, long)]
 		directories: Option<Vec<PathBuf>>,

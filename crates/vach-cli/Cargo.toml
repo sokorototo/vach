@@ -1,6 +1,6 @@
 [package]
 name = "vach-cli"
-version = "0.7.1"
+version = "0.8.0"
 edition = "2024"
 authors = [
 	"Jasper Fortuin <zeskeertwee@gmail.com>",

@@ -59,14 +59,14 @@ impl CommandTrait for Subcommand {
 		// 1: Assemble Input Settings
 		let cli::Command::Pack {
 			output,
-			files,
+			inputs,
 			directories,
 			recursive_directories,
 			exclude,
 			compress_mode,
 			compression_algorithm,
 			sign,
-			version,
+			tag,
 			flags,
 			jobs,
 			encrypt,
@@ -78,7 +78,7 @@ impl CommandTrait for Subcommand {
 		};
 
 		let flags = flags.clone().map(Flags::from_bits).unwrap_or_default();
-		let version = version.unwrap_or(0);
+		let version = tag.unwrap_or(0);
 
 		let compress_mode = compress_mode
 			.map(|c| match c {
@@ -128,7 +128,7 @@ impl CommandTrait for Subcommand {
 			.compression_algo(compression_algo)
 			.encrypt(encrypt)
 			.sign(sign)
-			.version(version as u8);
+			.version(version);
 
 		// 2: Assemble input files
 		let mut leaves = vec![];
@@ -148,14 +148,13 @@ impl CommandTrait for Subcommand {
 						None
 					},
 				})
-				.filter(|v| v.is_file())
 				.collect::<HashSet<PathBuf>>(),
 			None => HashSet::new(),
 		};
 
 		// Used to filter invalid inputs and excluded inputs
 		let path_filter = |path: &PathBuf| match path.canonicalize() {
-			Ok(canonical) => !excludes.contains(&canonical) && canonical.is_file(),
+			Ok(canonical) => !excludes.iter().any(|p| canonical.starts_with(p)) && canonical.is_file(),
 			Err(err) => {
 				eprintln!(
 					"Failed to canonicalize: {}. Skipping due to error: {}",
@@ -166,7 +165,7 @@ impl CommandTrait for Subcommand {
 			},
 		};
 
-		if let Some(f) = files {
+		if let Some(f) = inputs {
 			let iter = f
 				.into_iter()
 				.filter(path_filter)

@@ -94,7 +94,7 @@ pub enum Command {
 	#[command(version = commands::keypair::Subcommand::version())]
 	GenKeypair {
 		/// Path to output keypair files
-		#[arg(short, long, value_name = "FILE")]
+		#[arg(short, long, value_name = "PATH")]
 		output: Option<PathBuf>,
 		/// Whether to output keypair as separate signing and verifying keys
 		#[arg(short, long, default_value_t = true)]
@@ -104,19 +104,19 @@ pub enum Command {
 	#[command(version = commands::pack::Subcommand::version())]
 	Pack {
 		/// Input files to include in the archive
-		#[arg(short = 'i', long)]
-		files: Option<Vec<PathBuf>>,
+		#[arg(short, long, value_name = "FILES", num_args=1..)]
+		inputs: Option<Vec<PathBuf>>,
 		/// New archive will be output to this path
-		#[arg(short, long, value_name = "FILE")]
+		#[arg(short, long, value_name = "PATH")]
 		output: PathBuf,
 		/// Includes files from these directories, non-recursively
-		#[arg(short, long)]
+		#[arg(short, long, num_args=1..)]
 		directories: Option<Vec<PathBuf>>,
 		/// Includes files from these directories, recursively
-		#[arg(short, long = "recursive", value_name = "DIRECTORIES")]
+		#[arg(short, long = "recursive", value_name = "DIRECTORIES", num_args=1..)]
 		recursive_directories: Option<Vec<PathBuf>>,
 		/// Input files to include in the archive
-		#[arg(short = 'x', long, value_name = "FILES")]
+		#[arg(short = 'x', long, value_name = "FILES", num_args=1..)]
 		exclude: Option<Vec<PathBuf>>,
 		/// Compression Mode for entries, `Auto` picks the better on a per-entry basis
 		#[arg(short, long = "c-mode", value_name = "MODE", value_enum)]
@@ -136,9 +136,9 @@ pub enum Command {
 		/// Whether to sign entries and include signatures in the header
 		#[arg(short, long)]
 		sign: bool,
-		/// A simple version number for tagging and user purposes
+		/// A simple tag set in the header, can be used as a version eg
 		#[arg(short, long)]
-		version: Option<u32>,
+		tag: Option<u8>,
 		/// Flags to include in header section of archive
 		#[arg(short, long)]
 		flags: Option<u32>,

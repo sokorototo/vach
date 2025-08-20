@@ -47,13 +47,13 @@ pub enum Command {
 		#[arg(short, long, value_name = "DIR")]
 		output: PathBuf,
 		/// Path to keypair to use for cryptographic operations
-		#[arg(short, long)]
+		#[arg(short, long, value_name = "FILE")]
 		keypair: Option<PathBuf>,
 		/// Path to public key to use for cryptographic operations
-		#[arg(short, long)]
+		#[arg(short, long, value_name = "FILE")]
 		public_key: Option<PathBuf>,
 		/// Number of threads to spawn during unpacking
-		#[arg(short, long, default_value_t = num_cpus::get())]
+		#[arg(short, long, default_value_t = num_cpus::get(), value_name = "THREADS")]
 		jobs: usize,
 	},
 	/// Unpacks a resource and writes to stdout
@@ -63,13 +63,13 @@ pub enum Command {
 		#[arg(short, long, value_name = "FILE")]
 		input: PathBuf,
 		/// The `id` of the resource to extract
-		#[arg(short, long)]
+		#[arg(short, long, value_name = "ID")]
 		resource: String,
 		/// Path to keypair to use for cryptographic operations
-		#[arg(short, long)]
+		#[arg(short, long, value_name = "FILE")]
 		keypair: Option<PathBuf>,
 		/// Path to public key to use for cryptographic operations
-		#[arg(short, long)]
+		#[arg(short, long, value_name = "FILE")]
 		public_key: Option<PathBuf>,
 	},
 	/// List metadata and entries in an archive,
@@ -86,7 +86,7 @@ pub enum Command {
 	#[command(version = commands::verify::Subcommand::version())]
 	Verify {
 		/// Path to file to verify
-		#[arg(short, long, value_name = "FILE")]
+		#[arg(value_name = "FILE")]
 		input: PathBuf,
 	},
 	/// Generate a keypair (verifying & signing key)
@@ -113,10 +113,10 @@ pub enum Command {
 		#[arg(short, long)]
 		directories: Option<Vec<PathBuf>>,
 		/// Includes files from these directories, recursively
-		#[arg(short, long = "recursive")]
+		#[arg(short, long = "recursive", value_name = "DIRECTORIES")]
 		recursive_directories: Option<Vec<PathBuf>>,
 		/// Input files to include in the archive
-		#[arg(short = 'x', long)]
+		#[arg(short = 'x', long, value_name = "FILES")]
 		exclude: Option<Vec<PathBuf>>,
 		/// Compression Mode for entries, `Auto` picks the better on a per-entry basis
 		#[arg(short, long = "c-mode", value_name = "MODE", value_enum)]
@@ -125,10 +125,10 @@ pub enum Command {
 		#[arg(short = 'a', long = "c-algo", value_name = "ALGO", value_enum)]
 		compression_algorithm: Option<CompressionAlgorithmSetting>,
 		/// Path to keypair to use for cryptographic operations
-		#[arg(short, long)]
+		#[arg(short, long, value_name = "FILE")]
 		keypair: Option<PathBuf>,
 		/// Path to private key to use for cryptographic operations
-		#[arg(short = 's', long)]
+		#[arg(short = 'p', long, value_name = "FILE")]
 		private_key: Option<PathBuf>,
 		/// Encrypts the data using the provided keypair, using AesGcm256
 		#[arg(short, long)]
@@ -143,7 +143,7 @@ pub enum Command {
 		#[arg(short, long)]
 		flags: Option<u32>,
 		/// Number of threads to spawn during packing
-		#[arg(short, long, default_value_t = num_cpus::get())]
+		#[arg(short, long, default_value_t = num_cpus::get(), value_name = "THREADS")]
 		jobs: usize,
 	},
 }

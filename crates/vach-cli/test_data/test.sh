@@ -17,17 +17,17 @@ echo "Starting vach-cli tests..."
 cargo build --release
 
 # # Create simple archive with simple input, no compression only signatures
-$CMD pack --output signed.vach --directory-r ./ --compress-mode detect --compress-algo brotli --hash --exclude $EXCLUDE
+$CMD pack --output signed.vach --recursive ./ --c-mode detect --c-algo brotli --sign --exclude $EXCLUDE
 
 # # Split the resulting keypair
 $CMD list -i signed.vach
 
 # # Generate a compressed archive
-$CMD pack -o custom.vach -i GamerProfile.xml -x $EXCLUDE
+$CMD pack -o custom.vach -i GamerProfile.xml
 $CMD list -i custom.vach
 
 # # Generate an encrypted, signed and compressed archive
-$CMD pack -ea -o encrypted.vach -d lolcalt -c always -k keypair.kp
+$CMD pack -es -o encrypted.vach -d lolcalt -c always -k keypair.kp
 $CMD list -i encrypted.vach
 
 # Unpack the encrypted archive

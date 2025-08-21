@@ -204,6 +204,7 @@ where
 
 			// Process IO, read results from
 			let mut results = 0;
+
 			loop {
 				match rx.try_recv() {
 					Ok(r) => {

@@ -233,6 +233,6 @@ where
 	target.seek(SeekFrom::Start(Header::BASE_SIZE as _))?;
 	target.write_all(&registry)?;
 
-	target.flush().unwrap();
+	target.flush()?;
 	Ok(target.bytes)
 }

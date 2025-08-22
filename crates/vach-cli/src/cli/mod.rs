@@ -1,4 +1,4 @@
-use std::{path::PathBuf};
+use std::{path::PathBuf, thread};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::commands::{self, CommandTrait};
@@ -52,9 +52,12 @@ pub enum Command {
 		/// Path to public key to use for cryptographic operations
 		#[arg(short, long, value_name = "FILE")]
 		public_key: Option<PathBuf>,
-		/// Number of threads to spawn during unpacking
-		#[arg(short, long, default_value_t = num_cpus::get(), value_name = "THREADS")]
+		/// Number of threads to spawn during unpacking, prefer using one thread for small archives
+		#[arg(short, long, default_value_t = thread::available_parallelism().unwrap().get(), value_name = "THREADS")]
 		jobs: usize,
+		/// How may entries to process per thread, [default: archive.entries.count / jobs]
+		#[arg(short, long, value_name = "BATCH")]
+		chunks_size: Option<usize>,
 	},
 	/// Unpacks a resource and writes to stdout
 	#[command(version = commands::pipe::Subcommand::version())]
@@ -94,8 +97,8 @@ pub enum Command {
 	#[command(version = commands::keypair::Subcommand::version())]
 	GenKeypair {
 		/// Path to output keypair files
-		#[arg(short, long, value_name = "PATH")]
-		output: Option<PathBuf>,
+		#[arg(short, long, default_value_t = String::from("keypair.kp"), value_name = "PATH")]
+		output: String,
 		/// Whether to output keypair as separate signing and verifying keys
 		#[arg(short, long, default_value_t = true)]
 		split_key: bool,
@@ -116,7 +119,7 @@ pub enum Command {
 		#[arg(short, long = "recursive", value_name = "DIRECTORIES", num_args=1..)]
 		recursive_directories: Option<Vec<PathBuf>>,
 		/// Input files to include in the archive
-		#[arg(short = 'x', long, value_name = "FILES", num_args=1..)]
+		#[arg(short = 'x', long, value_name = "PATHS", num_args=1..)]
 		exclude: Option<Vec<PathBuf>>,
 		/// Compression Mode for entries, `Auto` picks the better on a per-entry basis
 		#[arg(short, long = "c-mode", value_name = "MODE", value_enum)]
@@ -143,7 +146,7 @@ pub enum Command {
 		#[arg(short, long)]
 		flags: Option<u32>,
 		/// Number of threads to spawn during packing
-		#[arg(short, long, default_value_t = num_cpus::get(), value_name = "THREADS")]
+		#[arg(short, long, default_value_t = thread::available_parallelism().unwrap().get(), value_name = "THREADS")]
 		jobs: usize,
 	},
 }

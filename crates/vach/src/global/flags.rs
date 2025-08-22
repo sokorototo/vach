@@ -81,7 +81,11 @@ impl fmt::Display for Flags {
 		let signed = if self.contains(Flags::SIGNED_FLAG) { 'S' } else { '-' };
 		let encrypted = if self.contains(Flags::ENCRYPTED_FLAG) { 'E' } else { '-' };
 
-		write!(f, "Flags[{}{}{}] = {:>8X}", compressed, encrypted, signed, self.bits)
+		if self.bits == 0 {
+			write!(f, "Flags[{}{}{}] = 0", compressed, encrypted, signed)
+		} else {
+			write!(f, "Flags[{}{}{}] = {:>8X}", compressed, encrypted, signed, self.bits)
+		}
 	}
 }
 

@@ -1,6 +1,7 @@
 use std::{
 	fs::{self, File},
 	io::{Cursor, Read, Seek, Write},
+	mem,
 	path::PathBuf,
 	thread,
 	time::Instant,
@@ -26,6 +27,7 @@ impl CommandTrait for Subcommand {
 			keypair,
 			public_key,
 			jobs,
+			chunks_size,
 		} = cli.command
 		else {
 			anyhow::bail!("Wrong implementation invoked for subcommand")
@@ -82,13 +84,16 @@ impl CommandTrait for Subcommand {
 			},
 		};
 
-		extract_archive(&archive, jobs, output)?;
+		if archive.entries().len() != 0 {
+			extract_archive(&archive, output, jobs, chunks_size)?;
+		}
+
 		Ok(())
 	}
 }
 
 fn extract_archive<T: Read + Seek + Send + Sync>(
-	archive: &Archive<T>, jobs: usize, target_folder: PathBuf,
+	archive: &Archive<T>, target_folder: PathBuf, jobs: usize, chunk_size: Option<usize>,
 ) -> anyhow::Result<()> {
 	// For measuring the time difference
 	let time = Instant::now();
@@ -114,14 +119,16 @@ fn extract_archive<T: Read + Seek + Send + Sync>(
 
 	// Extract all entries in parallel
 	let entries = archive.entries().iter().map(|(_, entry)| entry).collect::<Vec<_>>();
-	let chunk_size = (archive.entries().len() / jobs).max(archive.entries().len());
+	let chunk_size = chunk_size.unwrap_or(if entries.len() < jobs { 8 } else { entries.len() / jobs });
 
 	thread::scope(|s| -> anyhow::Result<()> {
+		let mut handles = Vec::new();
+
 		for chunk in entries.chunks(chunk_size) {
 			let pbar = pbar.clone();
 			let target_folder = target_folder.clone();
 
-			s.spawn(move || -> anyhow::Result<()> {
+			let handle = s.spawn(move || -> anyhow::Result<()> {
 				for entry in chunk {
 					let id = entry.id.as_ref();
 
@@ -147,6 +154,27 @@ fn extract_archive<T: Read + Seek + Send + Sync>(
 
 				Ok(())
 			});
+
+			handles.push(handle);
+		}
+
+		// wait for all threads to complete successfully
+		let mut pending = Vec::with_capacity(handles.len());
+
+		loop {
+			if handles.is_empty() {
+				break;
+			}
+
+			for handle in handles.drain(..) {
+				if handle.is_finished() {
+					handle.join().unwrap()?;
+				} else {
+					pending.push(handle);
+				}
+			}
+
+			mem::swap(&mut pending, &mut handles);
 		}
 
 		Ok(())

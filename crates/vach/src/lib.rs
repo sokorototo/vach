@@ -1,7 +1,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![allow(clippy::or_fun_call)]
-#![allow(clippy::manual_map)]
+#![allow(clippy::or_fun_call, clippy::manual_map)]
 #![deny(missing_docs)]
+#![forbid(unsafe_code)]
 
 /*!
 ![GitHub last commit](https://img.shields.io/github/last-commit/zeskeertwee/vach?logo=rust&logoColor=orange&style=flat-square)

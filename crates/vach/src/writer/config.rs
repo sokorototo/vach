@@ -55,7 +55,7 @@ impl Default for BuilderConfig {
 	fn default() -> BuilderConfig {
 		BuilderConfig {
 			#[cfg(feature = "multithreaded")]
-			num_threads: unsafe { NonZeroUsize::new_unchecked(4) },
+			num_threads: NonZeroUsize::new(4).unwrap(),
 			flags: Flags::default(),
 			#[cfg(feature = "crypto")]
 			signing_key: None,

@@ -8,38 +8,41 @@ use vach::prelude::*;
 use indicatif::HumanBytes;
 
 use super::CommandTrait;
-use crate::keys::key_names;
+use crate::cli;
 
-pub const VERSION: &str = "0.2";
+#[derive(Tabled)]
+struct FileTableEntry<'a> {
+	id: &'a str,
+	size: String,
+	flags: Flags,
+	compression: &'static str,
+}
 
 /// This command lists the entries in an archive in tabulated form
-pub struct Evaluator;
+pub struct Subcommand;
 
-impl CommandTrait for Evaluator {
-	fn evaluate(&self, args: &clap::ArgMatches) -> anyhow::Result<()> {
-		let archive_path = match args.value_of(key_names::INPUT) {
-			Some(path) => path,
-			None => {
-				anyhow::bail!("Please provide an input archive file using the -i or --input keys!")
-			},
+impl CommandTrait for Subcommand {
+	fn version() -> &'static str {
+		"0.3"
+	}
+
+	fn evaluate(&self, cli: cli::CommandLine) -> anyhow::Result<()> {
+		let cli::Command::List { input, sort } = cli.command else {
+			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};
 
-		let file = File::open(archive_path)?;
+		let file = File::open(input)?;
 		let archive = Archive::new(file)?;
 
 		// log basic metadata
 		println!("{}", archive);
 
-		let mut entries: Vec<_> = archive.entries().iter().map(|(_, entry)| entry).collect();
-
-		// Sort the entries accordingly
-		match args.value_of(key_names::SORT) {
-			Some("alphabetical") => entries.sort_by(|a, b| a.id.cmp(&b.id)),
-			Some("alphabetical-reversed") => entries.sort_by(|a, b| b.id.cmp(&a.id)),
-			Some("size-ascending") => entries.sort_by(|a, b| a.offset.cmp(&b.offset)),
-			Some("size-descending") => entries.sort_by(|a, b| b.offset.cmp(&a.offset)),
-			Some(sort) => anyhow::bail!("Unknown sort option provided: {}. Valid sort types are: 'alphabetical' 'alphabetical-descending' 'size-ascending' 'size-descending'", sort),
-			_ => (),
+		let mut entries = archive.entries().values().collect::<Vec<_>>();
+		match sort {
+			None | Some(cli::SortSetting::Alphabetical) => entries.sort_by(|a, b| a.id.cmp(&b.id)),
+			Some(cli::SortSetting::AlphabeticalReversed) => entries.sort_by(|a, b| b.id.cmp(&a.id)),
+			Some(cli::SortSetting::SizeAscending) => entries.sort_by(|a, b| a.offset.cmp(&b.offset)),
+			Some(cli::SortSetting::SizeDescending) => entries.sort_by(|a, b| b.offset.cmp(&a.offset)),
 		};
 
 		let table_entries: Vec<FileTableEntry> = entries
@@ -73,12 +76,4 @@ impl CommandTrait for Evaluator {
 
 		Ok(())
 	}
-}
-
-#[derive(Tabled)]
-struct FileTableEntry<'a> {
-	id: &'a str,
-	size: String,
-	flags: Flags,
-	compression: &'static str,
 }

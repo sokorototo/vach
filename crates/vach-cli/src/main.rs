@@ -1,25 +1,21 @@
+use clap::Parser;
+use crate::commands::CommandTrait;
+
 // Fundamental modules
-mod app;
+mod cli;
 mod commands;
-mod keys;
 mod utils;
 
-// NOTE: Unwrapping in a CLI is a no-no. Since throwing Rust developer errors at average users is mental overload
 fn main() {
-	// Build CLI
-	let keys = keys::build_keys();
-	let app = app::build_app(keys);
-	let commands = commands::build_commands();
+	let cli = cli::CommandLine::parse();
 
-	// Start CLI
-	let matches = app.get_matches();
-
-	match matches.subcommand() {
-		Some((key, mtx)) => commands.get(key).unwrap().evaluate(mtx),
-		None => {
-			println!("vach-cli: Run `vach --help` and refer to crates.io/vach-cli for the manual");
-			Ok(())
-		},
+	match cli.command {
+		cli::Command::Unpack { .. } => commands::unpack::Subcommand.evaluate(cli),
+		cli::Command::Pipe { .. } => commands::pipe::Subcommand.evaluate(cli),
+		cli::Command::List { .. } => commands::list::Subcommand.evaluate(cli),
+		cli::Command::Verify { .. } => commands::verify::Subcommand.evaluate(cli),
+		cli::Command::GenKeypair { .. } => commands::keypair::Subcommand.evaluate(cli),
+		cli::Command::Pack { .. } => commands::pack::Subcommand.evaluate(cli),
 	}
 	.unwrap();
 }

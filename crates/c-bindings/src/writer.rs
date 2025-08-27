@@ -119,14 +119,23 @@ pub extern "C" fn add_leaf_from_file(
 	}
 }
 
-/// Archive Builder Configuration, use `libffcall` to construct closures in C
-pub type v_builder_callback =
-	extern "C" fn(id: *const ffi::c_char, id_len: usize, data: *const ffi::c_char, len: usize, location: u64);
+/// callback for each newly created leaf node, use `userdata` to pass extra data
+pub type v_builder_callback = Option<
+	extern "C" fn(
+		userdata: *mut ffi::c_void,
+		id: *const ffi::c_char,
+		id_len: usize,
+		bytes: *const ffi::c_char,
+		len: usize,
+		location: u64,
+	),
+>;
 
 /// process context and dump to a preallocated buffer, buffer must at least be big enough to fit data
 #[no_mangle]
 pub extern "C" fn dump_archive_to_buffer(
-	ctx: *mut v_builder_ctx, buffer: *mut u8, buf_size: usize, callback: v_builder_callback, error_p: *mut i32,
+	ctx: *mut v_builder_ctx, buffer: *mut u8, buf_size: usize, callback: v_builder_callback,
+	userdata: *mut ffi::c_void, error_p: *mut i32,
 ) -> u64 {
 	let slice = unsafe { slice::from_raw_parts_mut(buffer, buf_size) };
 	let target = io::Cursor::new(slice);
@@ -136,23 +145,23 @@ pub extern "C" fn dump_archive_to_buffer(
 		return errors::report::<()>(error_p, errors::E_PARAMETER_IS_NULL) as _;
 	};
 
-	// check if callback is NULL
-	let mut cb = move |entry: &RegistryEntry, data: &[u8]| {
+	let mut wrapper = move |entry: &RegistryEntry, data: &[u8]| {
 		let id = entry.id.as_ref();
 
-		callback(
-			id.as_ptr() as _,
-			id.len(),
-			data.as_ptr() as _,
-			data.len(),
-			entry.location,
-		)
+		if let Some(cb) = callback {
+			cb(
+				userdata,
+				id.as_ptr() as _,
+				id.len(),
+				data.as_ptr() as _,
+				data.len(),
+				entry.location,
+			)
+		}
 	};
 
-	let wrapper = ((callback as usize) == 0).then_some(&mut cb as _);
-
 	// write
-	match dump(target, leaves, config, wrapper) {
+	match dump(target, leaves, config, Some(&mut wrapper)) {
 		Ok(written) => written,
 		Err(e) => errors::v_error_to_id::<()>(error_p, e) as _,
 	}
@@ -161,7 +170,8 @@ pub extern "C" fn dump_archive_to_buffer(
 /// processed context and write to a file on disk
 #[no_mangle]
 pub extern "C" fn dump_leaves_to_file(
-	ctx: *mut v_builder_ctx, path: *const ffi::c_char, callback: v_builder_callback, error_p: *mut i32,
+	ctx: *mut v_builder_ctx, path: *const ffi::c_char, callback: v_builder_callback, userdata: *mut ffi::c_void,
+	error_p: *mut i32,
 ) -> u64 {
 	let path = unsafe { ffi::CStr::from_ptr(path) }.to_str();
 	let Ok(path) = path else {
@@ -173,24 +183,24 @@ pub extern "C" fn dump_leaves_to_file(
 		return errors::report::<()>(error_p, errors::E_PARAMETER_IS_NULL) as _;
 	};
 
-	// check if callback is NULL
-	let mut cb = |entry: &RegistryEntry, data: &[u8]| {
+	let mut wrapper = move |entry: &RegistryEntry, data: &[u8]| {
 		let id = entry.id.as_ref();
 
-		callback(
-			id.as_ptr() as _,
-			id.len(),
-			data.as_ptr() as _,
-			data.len(),
-			entry.location,
-		)
+		if let Some(cb) = callback {
+			cb(
+				userdata,
+				id.as_ptr() as _,
+				id.len(),
+				data.as_ptr() as _,
+				data.len(),
+				entry.location,
+			)
+		}
 	};
-
-	let wrapper = ((callback as usize) == 0).then_some(&mut cb as _);
 
 	// write
 	let target = fs::File::create(path).unwrap();
-	match dump(target, leaves, config, wrapper) {
+	match dump(target, leaves, config, Some(&mut wrapper)) {
 		Ok(bytes_written) => bytes_written,
 		Err(e) => errors::v_error_to_id::<()>(error_p, e) as _,
 	}

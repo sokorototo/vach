@@ -17,7 +17,7 @@ cargo install vach-cli
 Generally follows the template:
 
 ```sh
-vach [subcommand] -[key] [...values]
+vach [subcommand] --switch value -s value
 ```
 
 ```sh
@@ -44,155 +44,60 @@ vach list -i textures.vach
 
 ---
 
-## **Commands:**
+## **Subcommand Documentation:**
 
-- Run `vach help` or `vach [command] --help` to display helpful information about each command.
+Run `vach help` to list available commands:
 
----
+```
+$ vach  --help
 
-### 1: pack
+A command-line tool to work with vach archive files and streams
 
-> `pack` is used to pack files and directories into archives. It takes inputs for customizing how the archive should be packaged.
+Usage: vach.exe <COMMAND>
 
-```sh
-# Any pack command must have an output, set using the "-o" or "--output" keys
-# This builds an empty archive
-vach pack -o hello.vach
+Commands:
+  unpack
+          Unpack an archive to the filesystem
+  pipe
+          Unpacks a resource and writes to stdout
+  list
+          List metadata and entries in an archive,
+  verify
+          Check an input file is a valid .vach archive
+  keypair
+          Generate a keypair (verifying & signing key)
+  pack
+          Pack some files into a .vach archive
+  help
+          Print this message or the help of the given subcommand(s)
 
-# You can add files as inputs using the "-i" or "--input" keys
-vach pack -o hello.vach -i hello.txt goodbye.txt
-
-# Or add a directory using "-d" or "--directory"
-vach pack -o hello.vach -d ./hello
-
-# Add a directory recursively using "-r" or "--directory-r"
-vach pack -o hello.vach -r ./hello
-
-# Inputs can be added in tandem
-vach pack -o hello.vach -i hi.txt bye.txt -d greetings PR -r talks
-
-# Exclude a given file from the queue
-vach pack -x hello/secret.txt -o hello.vach -d hello
-
-# Provide a keypair or secret key for cryptographic use
-vach pack -k keypair.kp -o hello.vach -i hello.txt goodbye.txt
-vach pack -s secret_key.sk -o hello.vach -i hello.txt goodbye.txt
-
-### MODIFIERS ####
-# Compression: "-c always", "-c never" or "-c detect"
-vach pack -c always -o hello.vach -i hello.txt goodbye.txt
-vach pack -c never -o hello.vach -i hello.txt goodbye.txt
-
-# CompressionAlgorithm: "-g lz4", "-g snappy" or "-g brotli". Both "-g" and "--compress-algo" keys work
-vach pack -g lz4 -c always -o hello.vach -i hello.txt goodbye.txt
-
-# Note compression has been set to never here so setting the compression algorithm to be used has no effect
-vach pack -g snappy -c never -o hello.vach -i hello.txt goodbye.txt
-
-# Hash: "-a" or "--hash"
-# Whether to include signatures in the archive
-# This help to detect if the archive has been tampered with
-# But it's very computationally intensive so use them sparingly
-vach pack -s -o hello.vach -i hello.txt goodbye.txt
-
-# Encrypt: "-e" or "--encrypt"
-# Whether to encrypt your archive
-# If no pre-existing keypair|secret_key is provided then a new one is written: `${OUTPUT_ARCHIVE}.kp`
-# EG hello.vach -> hello.vach.kp, same applies for "-a"
-vach pack -e -o hello.vach -i hello.txt goodbye.txt
-
-# Flags: "-f" or "--flags"
-# Flags set into the Archive header
-# Here the flags are set to 0b1000_1100_1001_0000
-vach pack -f 35984 -o hello.vach -i hello.txt goodbye.txt
-
-# Truncate: "-t" or "--truncate"
-# This modifier deletes the original files once they are packaged
-# hello.txt & goodbye.txt are now deleted
-vach pack -t -o hello.vach -i hello.txt goodbye.txt
+Options:
+  -h, --help
+          Print help
+  -V, --version
+          Print version
 ```
 
-### 2: unpack
-
->`unpack` it's just like `pack` but backwards
+Further run `vach [cmd] --help` to display help information per `[cmd]` command. For example for `vach pipe`:
 
 ```sh
-# Provide an input: "-i" or "--input"
-vach unpack -i target.vach
+$ vach pipe  --help
 
-# Output directory: "-o" or "--output"
-# Specify where to unpack the archive
-vach unpack -i source.vach -o ./output/
+Unpacks a resource and writes to stdout
 
-# Truncate: "-t" or "--truncate"
-# Deletes the original archive after unpacking
-vach unpack -t -i source.vach
+Usage: vach.exe pipe [OPTIONS] --input <FILE> --resource <ID>
 
-# If the archive is encrypted then provide a keypair or public key
-vach unpack -k keypair.kp -i source.vach
-vach unpack -s keypair.sk -i source.vach
-```
-
-### 3: pipe
-
->`pipe`: Read the data from a _specific_ entry and pipe it to stdout
-
-```sh
-# Print to stdout
-vach pipe -i target.vach -r npc-dialogue.txt
-
-# Pipe directly into a file
-vach pipe -i target.vach -r npc-dialogue.txt >> npc-dialogue.txt
-
-# Pipe into another process' stdin
-vach pipe -i presets.vach -r low.json | jq '."TextureResolution"'
-```
-
-### 4: list
-
-> Lists all the entries in the archive as a table
-
-```sh
-# Provide some input: "-i" or "--input"
-vach list -i textures.vach
-
-# SORT: "--sort"
-# How to sort the entries inside the table
-# Can either be: size-ascending, size-descending, alphabetical, alphabetical-reversed
-vach list -i textures.vach --sort size-descending
-```
-
-### 5: verify
-
-> Verifies the validity of a file as an archive
-
-```sh
-# Simplest command
-vach verify -i textures.vach
-```
-
-### 6: keypair
-
-> Key-pair generation command
-
-```sh
-vach keypair -o keypair.kp
-# -> keypair.kp
-
-# Splits the keypair into it's secret and public components immediately after generation
-vach keypair -s -o keypair.kp
-
-# -> keypair.pk
-# -> keypair.sk
-```
-
-### 7: split
-
-> Splits an existing keypair into it's public and secret components
-
-```sh
-vach split -i keypair.kp
-
-# -> keypair.pk
-# -> keypair.sk
+Options:
+  -i, --input <FILE>
+          Path to file to unpack
+  -r, --resource <ID>
+          The `id` of the resource to extract
+  -k, --keypair <FILE>
+          Path to keypair to use for cryptographic operations
+  -p, --public-key <FILE>
+          Path to public key to use for cryptographic operations
+  -h, --help
+          Print help
+  -V, --version
+          Print version
 ```

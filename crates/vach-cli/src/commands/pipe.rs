@@ -5,35 +5,34 @@ use std::{
 use vach::{crypto_utils, prelude::*};
 
 use super::CommandTrait;
-use crate::keys::key_names;
+use crate::cli;
 
-pub const VERSION: &str = "0.1.0";
+pub struct Subcommand;
 
-pub struct Evaluator;
+impl CommandTrait for Subcommand {
+	fn version() -> &'static str {
+		"0.2"
+	}
 
-impl CommandTrait for Evaluator {
-	fn evaluate(&self, args: &clap::ArgMatches) -> anyhow::Result<()> {
-		let input_path = match args.value_of(key_names::INPUT) {
-			Some(path) => path,
-			None => anyhow::bail!("Please provide an input path using the -i or --input key"),
-		};
-
-		let resource = match args.value_of(key_names::RESOURCE) {
-			Some(resource) => resource,
-			None => anyhow::bail!("Please provide a resource to extract using the -r or --resource key"),
+	fn evaluate(&self, cli: cli::CommandLine) -> anyhow::Result<()> {
+		let cli::Command::Pipe {
+			input,
+			resource,
+			keypair,
+			public_key,
+		} = cli.command
+		else {
+			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};
 
 		// Attempting to extract a public key from a -p or -k input
-		let verifying_key = match args.value_of(key_names::KEYPAIR) {
+		let verifying_key = match keypair {
 			Some(path) => {
-				let file = match File::open(path) {
-					Ok(it) => it,
-					Err(err) => anyhow::bail!("IOError: {} @ {}", err, path),
-				};
+				let file = File::open(&path)?;
 
 				Some(crypto_utils::read_keypair(file)?.verifying_key())
 			},
-			None => match args.value_of(key_names::PUBLIC_KEY) {
+			None => match public_key {
 				Some(path) => {
 					let file = File::open(path)?;
 					Some(crypto_utils::read_verifying_key(file)?)
@@ -42,9 +41,9 @@ impl CommandTrait for Evaluator {
 			},
 		};
 
-		let input_file = match File::open(input_path) {
+		let input_file = match File::open(&input) {
 			Ok(it) => BufReader::new(it),
-			Err(err) => anyhow::bail!("IOError: {} @ {}", err, input_path),
+			Err(err) => anyhow::bail!("IOError: {} @ {}", err, input.display()),
 		};
 
 		// load archive
@@ -65,12 +64,11 @@ impl CommandTrait for Evaluator {
 			},
 		};
 
-		let stdout = io::stdout();
-		{
-			let mut handle = stdout.lock();
-			let resource = archive.fetch_mut(resource)?;
-			handle.write_all(&resource.data)?;
-		}
+		let mut handle = io::stdout().lock();
+		let resource = archive.fetch_mut(resource)?;
+		handle.write_all(&resource.data)?;
+
+		drop(handle);
 
 		Ok(())
 	}

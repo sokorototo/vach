@@ -1,8 +1,8 @@
 use std::{
 	fs::{self, File},
 	io::{Cursor, Read, Seek, Write},
+	mem,
 	path::PathBuf,
-	str::FromStr,
 	thread,
 	time::Instant,
 };
@@ -11,53 +11,59 @@ use vach::{crypto_utils, prelude::*};
 use indicatif::{ProgressBar, ProgressStyle};
 
 use super::CommandTrait;
-use crate::keys::key_names;
+use crate::cli;
 
-pub const VERSION: &str = "0.1.1";
+pub struct Subcommand;
 
-/// This command extracts an archive into the specified output folder
-pub struct Evaluator;
+impl CommandTrait for Subcommand {
+	fn version() -> &'static str {
+		"0.2"
+	}
 
-impl CommandTrait for Evaluator {
-	fn evaluate(&self, args: &clap::ArgMatches) -> anyhow::Result<()> {
-		let input_path = match args.value_of(key_names::INPUT) {
-			Some(path) => path,
-			None => anyhow::bail!("Please provide an input path using the -i or --input key"),
+	fn evaluate(&self, cli: cli::CommandLine) -> anyhow::Result<()> {
+		let cli::Command::Unpack {
+			input,
+			output,
+			keypair,
+			public_key,
+			jobs,
+			chunks_size,
+		} = cli.command
+		else {
+			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};
 
-		let output_path = match args.value_of(key_names::OUTPUT) {
-			Some(path) => PathBuf::from_str(path)?,
-			None => Default::default(),
-		};
+		let output = match output {
+			Some(path) => {
+				if path.is_file() {
+					anyhow::bail!("Please provide a directory|folder path as the value of -o | --output")
+				};
 
-		if output_path.is_file() {
-			anyhow::bail!("Please provide a directory|folder path as the value of -o | --output")
+				path
+			},
+			None => PathBuf::from(input.file_stem().unwrap()),
 		};
 
 		// Attempting to extract a public key from a -p or -k input
-		let verifying_key = match args.value_of(key_names::KEYPAIR) {
+		let verifying_key = match keypair {
 			Some(path) => {
-				let file = match File::open(path) {
-					Ok(it) => it,
-					Err(err) => anyhow::bail!("IOError: {} @ {}", err, path),
-				};
-
+				let file = File::open(&path)?;
 				Some(crypto_utils::read_keypair(file)?.verifying_key())
 			},
-			None => match args.value_of(key_names::PUBLIC_KEY) {
+			None => match public_key {
 				Some(path) => {
-					let file = File::open(path)?;
+					let file = File::open(&path)?;
 					Some(crypto_utils::read_verifying_key(file)?)
 				},
 				None => None,
 			},
 		};
 
-		// load file into memory map, and init cursor
-		let file = File::open(input_path)?;
+		// memory map file, init cursor
+		let file = File::open(input)?;
 		let mmap = unsafe { memmap2::Mmap::map(&file).expect("Unable to map file to memory") };
 		#[cfg(unix)]
-		mmap.advise(memmap2::Advice::Random);
+		mmap.advise(memmap2::Advice::Random).unwrap();
 		let cursor = Cursor::new(mmap.as_ref());
 
 		// load archive, with optional key
@@ -78,20 +84,16 @@ impl CommandTrait for Evaluator {
 			},
 		};
 
-		let num_threads = args
-			.value_of(key_names::JOBS)
-			.map(|v| v.parse::<usize>().ok())
-			.flatten()
-			.filter(|s| *s > 0)
-			.unwrap_or(num_cpus::get());
+		if archive.entries().len() != 0 {
+			extract_archive(&archive, output, jobs, chunks_size)?;
+		}
 
-		extract_archive(&archive, num_threads, output_path)?;
 		Ok(())
 	}
 }
 
 fn extract_archive<T: Read + Seek + Send + Sync>(
-	archive: &Archive<T>, jobs: usize, target_folder: PathBuf,
+	archive: &Archive<T>, target_folder: PathBuf, jobs: usize, chunk_size: Option<usize>,
 ) -> anyhow::Result<()> {
 	// For measuring the time difference
 	let time = Instant::now();
@@ -110,19 +112,23 @@ fn extract_archive<T: Read + Seek + Send + Sync>(
 		ProgressStyle::default_bar()
 			.template(super::PROGRESS_BAR_STYLE)?
 			.progress_chars("█░-")
-			.tick_chars("⢀ ⡀ ⠄ ⢂ ⡂ ⠅ ⢃ ⡃ ⠍ ⢋ ⡋ ⠍⠁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⢈⠩⡀⢙⠄⡙⢂⠩⡂⢘⠅⡘⢃⠨⡃⢐⠍⡐⢋⠠⡋⢀⠍⡁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⠈⠩ ⢙ ⡙ ⠩ ⢘ ⡘ ⠨ ⢐ ⡐ ⠠ ⢀ ⡀"),
+			.tick_chars(
+				"⢀ ⡀ ⠄ ⢂ ⡂ ⠅ ⢃ ⡃ ⠍ ⢋ ⡋ ⠍⠁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⢈⠩⡀⢙⠄⡙⢂⠩⡂⢘⠅⡘⢃⠨⡃⢐⠍⡐⢋⠠⡋⢀⠍⡁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⠈⠩ ⢙ ⡙ ⠩ ⢘ ⡘ ⠨ ⢐ ⡐ ⠠ ⢀ ⡀",
+			),
 	);
 
 	// Extract all entries in parallel
 	let entries = archive.entries().iter().map(|(_, entry)| entry).collect::<Vec<_>>();
-	let chunk_size = (archive.entries().len() / jobs).max(archive.entries().len());
+	let chunk_size = chunk_size.unwrap_or(if entries.len() < jobs { 8 } else { entries.len() / jobs });
 
 	thread::scope(|s| -> anyhow::Result<()> {
+		let mut handles = Vec::new();
+
 		for chunk in entries.chunks(chunk_size) {
 			let pbar = pbar.clone();
 			let target_folder = target_folder.clone();
 
-			s.spawn(move || -> anyhow::Result<()> {
+			let handle = s.spawn(move || -> anyhow::Result<()> {
 				for entry in chunk {
 					let id = entry.id.as_ref();
 
@@ -148,6 +154,27 @@ fn extract_archive<T: Read + Seek + Send + Sync>(
 
 				Ok(())
 			});
+
+			handles.push(handle);
+		}
+
+		// wait for all threads to complete successfully
+		let mut pending = Vec::with_capacity(handles.len());
+
+		loop {
+			if handles.is_empty() {
+				break;
+			}
+
+			for handle in handles.drain(..) {
+				if handle.is_finished() {
+					handle.join().unwrap()?;
+				} else {
+					pending.push(handle);
+				}
+			}
+
+			mem::swap(&mut pending, &mut handles);
 		}
 
 		Ok(())

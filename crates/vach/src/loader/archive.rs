@@ -55,13 +55,12 @@ impl<T> std::fmt::Display for Archive<T> {
 }
 
 impl<T> Archive<T> {
-	/// Consume the [Archive] and return the underlying handle
-	/// `None` if underlying
+	/// Consume the [`Archive`] and return the underlying source. Only valid if internal [`Mutex`] isn't poisoned
 	pub fn into_inner(self) -> Result<T, std::sync::PoisonError<T>> {
 		self.handle.into_inner()
 	}
 
-	// Decompress and|or decrypt the data
+	// Decompress and|or Decrypt some data
 	#[inline(never)]
 	fn process(&self, entry: &RegistryEntry, mut raw: Vec<u8>) -> InternalResult<(Vec<u8>, bool)> {
 		/* Literally the hottest function in the block (🕶) */
@@ -71,7 +70,7 @@ impl<T> Archive<T> {
 		let mut verified = false;
 
 		// Signature validation
-		// Validate signature only if a public key is passed with Some(PUBLIC_KEY)
+		// Validate signature only if a public key is present
 		#[cfg(feature = "crypto")]
 		if let Some(pk) = self.key {
 			// If there is an error the data is flagged as invalid
@@ -147,7 +146,6 @@ impl<T> Archive<T> {
 	}
 }
 
-// INFO: Record Based FileSystem: https://en.wikipedia.org/wiki/Record-oriented_filesystem
 impl<T> Archive<T>
 where
 	T: Seek + Read,
@@ -236,7 +234,7 @@ impl<T> Archive<T>
 where
 	T: Read + Seek,
 {
-	/// Given a data source and a [`RegistryEntry`], gets the adjacent raw data
+	/// Read a [`RegistryEntry's`](RegistryEntry) adjacent raw data
 	pub(crate) fn read_raw(handle: &mut T, entry: &RegistryEntry) -> InternalResult<Vec<u8>> {
 		let mut buffer = Vec::with_capacity(entry.offset as usize + 64);
 		handle.seek(SeekFrom::Start(entry.location))?;
@@ -249,12 +247,8 @@ where
 
 	/// Cheaper alternative to [`fetch`](Archive::fetch) that doesn't lock the underlying [Mutex]
 	pub fn fetch_mut(&mut self, id: impl AsRef<str>) -> InternalResult<Resource> {
-		// The reason for this function's unnecessary complexity is it uses the provided functions independently, thus preventing an unnecessary allocation [MAYBE TOO MUCH?]
 		if let Some(entry) = self.fetch_entry(&id) {
 			let raw = Archive::read_raw(self.handle.get_mut().unwrap(), &entry)?;
-
-			// Prepare contextual variables
-			// Decompress and|or decrypt the data
 			let (buffer, verified) = self.process(&entry, raw)?;
 
 			Ok(Resource {
@@ -269,16 +263,14 @@ where
 	}
 
 	/// Fetch a [`Resource`] with the given `ID`.
-	/// > Locks the underlying [`Mutex`], for a cheaper non-locking operation refer to `Archive::fetch_mut`
+	/// Locks the underlying [`Mutex`], for a cheaper non-locking operation refer to [`Archive::fetch_mut`]
 	pub fn fetch(&self, id: impl AsRef<str>) -> InternalResult<Resource> {
-		// The reason for this function's unnecessary complexity is it uses the provided functions independently, thus preventing an unnecessary allocation [MAYBE TOO MUCH?]
 		if let Some(entry) = self.fetch_entry(&id) {
 			let raw = {
 				let mut guard = self.handle.lock().unwrap();
 				Archive::read_raw(guard.deref_mut(), &entry)?
 			};
 
-			// Prepare contextual variables
 			// Decompress and|or decrypt the data
 			let (buffer, is_secure) = self.process(&entry, raw)?;
 

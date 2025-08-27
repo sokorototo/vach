@@ -5,10 +5,9 @@ use std::fmt;
 use aes_gcm::aead::Aead;
 use aes_gcm::aes::cipher::consts::U12;
 use aes_gcm::{Aes256Gcm, Nonce, KeyInit};
-
 pub use ed25519_dalek::{SigningKey, VerifyingKey, Signature};
 
-use crate::prelude::{InternalResult, InternalError};
+use crate::global::error::{InternalError, InternalResult};
 
 /// Encryption - Decryption, A convenient wrapper around [`aes`](aes_gcm) encryption and decryption
 pub(crate) struct Encryptor {
@@ -18,7 +17,10 @@ pub(crate) struct Encryptor {
 
 impl fmt::Debug for Encryptor {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "[Vach::Encryptor] cipher: Aes256Gcm, nonce: {:?}", self.nonce)
+		f.debug_struct("Encryptor")
+			.field("cipher", &"Aes256Gcm")
+			.field("nonce", &self.nonce)
+			.finish()
 	}
 }
 

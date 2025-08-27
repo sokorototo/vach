@@ -2,7 +2,7 @@ use std::fmt;
 use crate::global::flags::Flags;
 
 /// Basically processed data obtained from an archive returned by [`archive.fetch(...)`](crate::archive::Archive::fetch) and [`archive.fetch_mut(...)`](crate::archive::Archive::fetch_mut)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Resource {
 	/// The parsed data
 	pub data: Box<[u8]>,

@@ -1,7 +1,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![allow(clippy::or_fun_call)]
-#![allow(clippy::manual_map)]
+#![allow(clippy::or_fun_call, clippy::manual_map)]
 #![deny(missing_docs)]
+#![forbid(unsafe_code)]
 
 /*!
 ![GitHub last commit](https://img.shields.io/github/last-commit/zeskeertwee/vach?logo=rust&logoColor=orange&style=flat-square)
@@ -25,9 +25,9 @@ use vach::prelude::*;
 
 // collect leaves in a vector, or static buffer
 let mut leaves = [
-	// Leaf::new(File::open("background.wav").unwrap(), "ambient"),
-	Leaf::new([12, 23, 34, 45, 56, 67, 78, 90, 69].as_slice(), "ftstep").compress(CompressMode::Always),
-	Leaf::new(b"Hello, Cassandra!".as_slice(), "hello")
+   // Leaf::new(File::open("background.wav").unwrap(), "ambient"),
+   Leaf::new([12, 23, 34, 45, 56, 67, 78, 90, 69].as_slice(), "ftstep").compress(CompressMode::Always),
+   Leaf::new(b"Hello, Cassandra!".as_slice(), "hello")
 ];
 
 // let mut target = File::create("sounds.vach")?;

@@ -102,8 +102,6 @@ fn flags_set_intersects() {
 #[test]
 #[cfg(all(feature = "compression", feature = "builder"))]
 fn builder_no_signature() {
-	let config = BuilderConfig::default();
-
 	let mut poem_flags = Flags::default();
 	poem_flags
 		.set(CUSTOM_FLAG_1 | CUSTOM_FLAG_2 | CUSTOM_FLAG_3 | CUSTOM_FLAG_4, true)
@@ -122,7 +120,7 @@ fn builder_no_signature() {
 
 	let mut target = File::create(SIMPLE_TARGET).unwrap();
 	let mut count = 0usize;
-	let written = dump(&mut target, &mut leaves, &config, Some(&mut |_, _| count += 1)).unwrap();
+	let written = dump(&mut target, &mut leaves, None, Some(&mut |_, _| count += 1)).unwrap();
 
 	assert_eq!(count, leaves.len(),);
 	assert_eq!(target.metadata().unwrap().len(), written);
@@ -164,7 +162,7 @@ fn builder_with_signature() -> InternalResult {
 	];
 
 	let mut target = File::create(SIGNED_TARGET)?;
-	let written = dump(&mut target, leaves.as_mut_slice(), &build_config, None)?;
+	let written = dump(&mut target, leaves.as_mut_slice(), Some(build_config), None)?;
 
 	assert_eq!(target.metadata().unwrap().len(), written);
 	Ok(())
@@ -312,7 +310,7 @@ fn consolidated_test() -> InternalResult {
 
 	// Dump data
 	let then = Instant::now();
-	let written = dump(&mut target, &mut leaves, &config, None)?;
+	let written = dump(&mut target, &mut leaves, Some(config), None)?;
 
 	// Just because
 	println!("Building took: {:?}", then.elapsed());
@@ -345,6 +343,17 @@ fn consolidated_test() -> InternalResult {
 }
 
 #[test]
+fn null_roundtrip() -> InternalResult {
+	let mut target = std::io::Cursor::new(vec![]);
+	dump::<_, &[u8]>(&mut target, &mut [], None, None)?;
+
+	let archive = Archive::new(target)?;
+	assert_eq!(archive.entries().len(), 0, "Archive should have zero entries");
+
+	Ok(())
+}
+
+#[test]
 #[cfg(all(feature = "compression", feature = "builder"))]
 fn test_compressors() -> InternalResult {
 	use std::io::Cursor;
@@ -353,21 +362,24 @@ fn test_compressors() -> InternalResult {
 	let input = [12u8; INPUT_LEN];
 	let mut target = Cursor::new(vec![]);
 
-	let mut leaves = [
-		Leaf::new(input.as_slice(), "LZ4")
-			.compression_algo(CompressionAlgorithm::LZ4)
-			.compress(CompressMode::Always),
-		Leaf::new(input.as_slice(), "BROTLI")
-			.compression_algo(CompressionAlgorithm::Brotli(9))
-			.compress(CompressMode::Always),
-		Leaf::new(input.as_slice(), "SNAPPY")
-			.compression_algo(CompressionAlgorithm::Snappy)
-			.compress(CompressMode::Always),
-	];
+	dump(
+		&mut target,
+		&mut [
+			Leaf::new(input.as_slice(), "LZ4")
+				.compression_algo(CompressionAlgorithm::LZ4)
+				.compress(CompressMode::Always),
+			Leaf::new(input.as_slice(), "BROTLI")
+				.compression_algo(CompressionAlgorithm::Brotli(9))
+				.compress(CompressMode::Always),
+			Leaf::new(input.as_slice(), "SNAPPY")
+				.compression_algo(CompressionAlgorithm::Snappy)
+				.compress(CompressMode::Always),
+		],
+		None,
+		None,
+	)?;
 
-	let builder_config = BuilderConfig::default();
-	dump(&mut target, &mut leaves, &builder_config, None)?;
-
+	// parse archive
 	let mut archive = Archive::new(&mut target)?;
 
 	let d1 = archive.fetch_mut("LZ4")?;
@@ -415,8 +427,8 @@ fn test_batch_fetching() -> InternalResult {
 	ids.push("ERRORS".to_string());
 
 	// Process data
-	let config = BuilderConfig::default().threads(2);
-	dump(&mut target, leaves.as_mut_slice(), &config, None)?;
+	let config = BuilderConfig::default().threads(4);
+	dump(&mut target, leaves.as_mut_slice(), Some(config), None)?;
 
 	let archive = Archive::new(target)?;
 	let mut resources = ids

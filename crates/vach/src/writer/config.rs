@@ -50,15 +50,3 @@ impl BuilderConfig {
 		crate::crypto_utils::read_keypair(handle).map(|kp| self.signing_key = Some(kp))
 	}
 }
-
-impl Default for BuilderConfig {
-	fn default() -> BuilderConfig {
-		BuilderConfig {
-			#[cfg(feature = "multithreaded")]
-			num_threads: NonZeroUsize::new(4).unwrap(),
-			flags: Flags::default(),
-			#[cfg(feature = "crypto")]
-			signing_key: None,
-		}
-	}
-}

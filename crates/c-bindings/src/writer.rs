@@ -12,12 +12,7 @@ pub extern "C" fn new_builder_ctx(sk_bytes: *const [u8; super::V_SECRET_KEY_LENG
 	let signing_key = unsafe { sk_bytes.as_ref() }.map(SigningKey::from_bytes);
 	let flags = Flags::from_bits(flags);
 
-	let config = BuilderConfig {
-		flags,
-		signing_key,
-		..Default::default()
-	};
-
+	let config = BuilderConfig { flags, signing_key };
 	Box::into_raw(Box::<_builder_ctx_inner>::new((config, Vec::new()))) as _
 }
 
@@ -161,7 +156,7 @@ pub extern "C" fn dump_archive_to_buffer(
 	};
 
 	// write
-	match dump(target, leaves, config, Some(&mut wrapper)) {
+	match dump(target, leaves, Some(config.clone()), Some(&mut wrapper)) {
 		Ok(written) => written,
 		Err(e) => errors::v_error_to_id::<()>(error_p, e) as _,
 	}
@@ -200,7 +195,7 @@ pub extern "C" fn dump_leaves_to_file(
 
 	// write
 	let target = fs::File::create(path).unwrap();
-	match dump(target, leaves, config, Some(&mut wrapper)) {
+	match dump(target, leaves, Some(config.clone()), Some(&mut wrapper)) {
 		Ok(bytes_written) => bytes_written,
 		Err(e) => errors::v_error_to_id::<()>(error_p, e) as _,
 	}

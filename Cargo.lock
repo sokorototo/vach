@@ -188,7 +188,7 @@ name = "c-bindings"
 version = "0.1.0"
 dependencies = [
  "cbindgen",
- "vach 0.7.3",
+ "vach 0.7.5",
 ]
 
 [[package]]
@@ -1272,7 +1272,7 @@ dependencies = [
 
 [[package]]
 name = "vach"
-version = "0.7.3"
+version = "0.7.5"
 dependencies = [
  "aes-gcm",
  "brotli",
@@ -1289,7 +1289,7 @@ name = "vach-benchmarks"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "vach 0.7.3",
+ "vach 0.7.5",
 ]
 
 [[package]]

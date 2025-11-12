@@ -50,15 +50,20 @@ impl<W: Seek + Send> Seek for WriteCounter<W> {
 
 /// iterates over all [`Leaf`], processes them and writes the output into the target. returns bytes written to `target`
 pub fn dump<'a, W, R>(
-	target: W, leaves: &mut [Leaf<R>], config: &BuilderConfig,
+	target: W, leaves: &mut [Leaf<R>], config: Option<BuilderConfig>,
 	mut callback: Option<&mut dyn FnMut(&RegistryEntry, &[u8])>,
 ) -> InternalResult<u64>
 where
 	W: Write + Seek + Send,
 	R: Read + Sync + Send,
 {
-	// init
-	let mut config = config.clone();
+	let mut config = config.unwrap_or(BuilderConfig {
+		#[cfg(feature = "multithreaded")]
+		num_threads: NonZeroUsize::new(4).unwrap(),
+		flags: Flags::default(),
+		#[cfg(feature = "crypto")]
+		signing_key: None,
+	});
 	let mut target = WriteCounter {
 		bytes: 0,
 		inner: target,

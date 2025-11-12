@@ -1,4 +1,4 @@
-use std::{fs, io, slice, ffi};
+use std::{ffi, fs, io, slice};
 use vach::prelude::*;
 use super::errors;
 
@@ -12,7 +12,11 @@ pub extern "C" fn new_builder_ctx(sk_bytes: *const [u8; super::V_SECRET_KEY_LENG
 	let signing_key = unsafe { sk_bytes.as_ref() }.map(SigningKey::from_bytes);
 	let flags = Flags::from_bits(flags);
 
-	let config = BuilderConfig { flags, signing_key };
+	let config = BuilderConfig {
+		flags,
+		signing_key,
+		num_threads: 1,
+	};
 	Box::into_raw(Box::<_builder_ctx_inner>::new((config, Vec::new()))) as _
 }
 

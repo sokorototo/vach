@@ -33,8 +33,7 @@ let mut leaves = [
 // let mut target = File::create("sounds.vach")?;
 let mut target = Cursor::new(Vec::new());
 
-let config = BuilderConfig::default();
-let bytes_written = dump(&mut target, &mut leaves, &config, None).unwrap();
+let bytes_written = dump(&mut target, &mut leaves, None, None).unwrap();
 
 // roundtrip
 let mut archive = Archive::new(target).unwrap();

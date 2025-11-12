@@ -1,6 +1,3 @@
-#[cfg(feature = "multithreaded")]
-use std::num::NonZeroUsize;
-
 use crate::global::flags::Flags;
 #[cfg(feature = "crypto")]
 use crate::crypto;
@@ -8,9 +5,9 @@ use crate::crypto;
 /// Settings for [`dump`](crate::writer::dump)
 #[derive(Debug, Clone)]
 pub struct BuilderConfig {
-	/// Number of threads to spawn during `Builder::dump`, defaults to 4
-	#[cfg(feature = "multithreaded")]
-	pub num_threads: NonZeroUsize,
+	/// Number of threads to spawn during `Builder::dump`, defaults to 4.
+	/// Does nothing if the `multithreaded` feature is not enabled.
+	pub num_threads: usize,
 	/// Singleton flags to be written into the `Header` section of the archive.
 	pub flags: Flags,
 	/// An optional private key. If one is provided, then the archive will have signatures.
@@ -22,12 +19,8 @@ pub struct BuilderConfig {
 // Helper functions
 impl BuilderConfig {
 	/// Setter for the [`num_threads`](BuilderConfig::num_threads) field
-	#[cfg(feature = "multithreaded")]
 	pub fn threads(mut self, num_threads: usize) -> Self {
-		if let Some(n) = NonZeroUsize::new(num_threads) {
-			self.num_threads = n;
-		}
-
+		self.num_threads = num_threads;
 		self
 	}
 
@@ -48,5 +41,16 @@ impl BuilderConfig {
 	#[cfg(feature = "crypto")]
 	pub fn load_keypair<T: std::io::Read>(&mut self, handle: T) -> crate::global::error::InternalResult {
 		crate::crypto_utils::read_keypair(handle).map(|kp| self.signing_key = Some(kp))
+	}
+}
+
+impl Default for BuilderConfig {
+	fn default() -> BuilderConfig {
+		BuilderConfig {
+			num_threads: 4,
+			flags: Flags::default(),
+			#[cfg(feature = "crypto")]
+			signing_key: None,
+		}
 	}
 }

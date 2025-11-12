@@ -239,7 +239,7 @@ fn builder_with_encryption() -> InternalResult {
 	);
 
 	let mut target = File::create(ENCRYPTED_TARGET)?;
-	let written = dump(&mut target, leaves.as_mut_slice(), &build_config, None)?;
+	let written = dump(&mut target, leaves.as_mut_slice(), Some(build_config), None)?;
 
 	assert_eq!(target.metadata().unwrap().len(), written);
 	Ok(())

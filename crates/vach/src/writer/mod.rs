@@ -1,8 +1,5 @@
 use std::io::{Seek, SeekFrom, Write, Read};
 
-#[cfg(feature = "multithreaded")]
-use std::{thread, sync::mpsc};
-
 mod config;
 mod leaf;
 
@@ -57,13 +54,7 @@ where
 	W: Write + Seek + Send,
 	R: Read + Sync + Send,
 {
-	let mut config = config.unwrap_or(BuilderConfig {
-		#[cfg(feature = "multithreaded")]
-		num_threads: NonZeroUsize::new(4).unwrap(),
-		flags: Flags::default(),
-		#[cfg(feature = "crypto")]
-		signing_key: None,
-	});
+	let mut config = config.unwrap_or_default();
 	let mut target = WriteCounter {
 		bytes: 0,
 		inner: target,
@@ -180,17 +171,17 @@ where
 		Ok(())
 	};
 
-	#[cfg(feature = "multithreaded")]
-	let (tx, rx) = mpsc::sync_channel(leaves.len());
+	// only spawn threads if `multithreaded` feature is enabled
+	if config.num_threads >= 1 && cfg!(feature = "multithreaded") {
+		use std::{thread, sync::mpsc};
 
-	#[cfg(feature = "multithreaded")]
-	if !leaves.is_empty() {
+		let (tx, rx) = mpsc::sync_channel(leaves.len());
 		thread::scope(|s| -> InternalResult<()> {
 			let count = leaves.len();
 
 			#[rustfmt::skip]
 			// if we have an insane number of threads send leafs in chunks of 8
-			let chunk_size = if config.num_threads.get() > count { 8 } else { count / config.num_threads };
+			let chunk_size = if config.num_threads > count { 8 } else { count / config.num_threads.max(1) };
 
 			let chunks = leaves.chunks_mut(chunk_size);
 			let encryptor = encryptor.as_ref();
@@ -227,13 +218,13 @@ where
 				}
 			}
 		})?;
+	} else {
+		// processed all on the main thread baby!
+		leaves
+			.iter_mut()
+			.map(|l| leaf::process_leaf(l, encryptor.as_ref()))
+			.try_for_each(write)?;
 	};
-
-	#[cfg(not(feature = "multithreaded"))]
-	leaves
-		.iter_mut()
-		.map(|l| leaf::process_leaf(l, encryptor.as_ref()))
-		.try_for_each(write)?;
 
 	// write UPDATED REGISTRY
 	target.seek(SeekFrom::Start(Header::BASE_SIZE as _))?;

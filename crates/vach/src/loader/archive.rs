@@ -35,13 +35,11 @@ pub struct Archive<T> {
 }
 
 impl<T> std::fmt::Display for Archive<T> {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		let bytes = self
-			.entries
-			.values()
-			.map(|re| re.offset)
-			.reduce(|a, b| a + b)
-			.unwrap_or(0);
+	fn fmt(
+		&self,
+		f: &mut std::fmt::Formatter<'_>,
+	) -> std::fmt::Result {
+		let bytes = self.entries.values().map(|re| re.offset).reduce(|a, b| a + b).unwrap_or(0);
 
 		write!(
 			f,
@@ -62,7 +60,11 @@ impl<T> Archive<T> {
 
 	// Decompress and|or Decrypt some data
 	#[inline(never)]
-	fn process(&self, entry: &RegistryEntry, mut raw: Vec<u8>) -> InternalResult<(Vec<u8>, bool)> {
+	fn process(
+		&self,
+		entry: &RegistryEntry,
+		mut raw: Vec<u8>,
+	) -> InternalResult<(Vec<u8>, bool)> {
 		/* Literally the hottest function in the block (🕶) */
 
 		// buffer_a originally contains the raw data
@@ -123,13 +125,7 @@ impl<T> Archive<T> {
 				} else if entry.flags.contains(Flags::SNAPPY_COMPRESSED) {
 					Compressor::new(source.as_slice()).decompress(CompressionAlgorithm::Snappy, &mut target)?
 				} else {
-					return InternalResult::Err(InternalError::OtherError(
-						format!(
-							"Unable to determine the compression algorithm used for entry: {}",
-							entry
-						)
-						.into(),
-					));
+					return InternalResult::Err(InternalError::OtherError(format!("Unable to determine the compression algorithm used for entry: {}", entry).into()));
 				};
 
 				Ok((target, verified))
@@ -183,7 +179,10 @@ where
 
 	/// Parse an [`Archive`], with an optional [`VerifyingKey`](crypto::VerifyingKey).
 	#[cfg(feature = "crypto")]
-	pub fn with_key(mut handle: T, vk: &ed25519_dalek::VerifyingKey) -> InternalResult<Archive<T>> {
+	pub fn with_key(
+		mut handle: T,
+		vk: &ed25519_dalek::VerifyingKey,
+	) -> InternalResult<Archive<T>> {
 		// Start reading from the start of the input
 		handle.seek(SeekFrom::Start(0))?;
 
@@ -203,7 +202,6 @@ where
 			header,
 			handle: Mutex::new(handle),
 			entries,
-
 			key: Some(vk.clone()),
 			decryptor: Some(crypto::Encryptor::new(vk)),
 		};
@@ -213,7 +211,10 @@ where
 
 	/// Fetch a [`RegistryEntry`] from this [`Archive`].
 	/// This can be used for debugging, as the [`RegistryEntry`] holds information on data with the adjacent ID.
-	pub fn fetch_entry(&self, id: impl AsRef<str>) -> Option<RegistryEntry> {
+	pub fn fetch_entry(
+		&self,
+		id: impl AsRef<str>,
+	) -> Option<RegistryEntry> {
 		self.entries.get(id.as_ref()).cloned()
 	}
 
@@ -235,7 +236,10 @@ where
 	T: Read + Seek,
 {
 	/// Read a [`RegistryEntry's`](RegistryEntry) adjacent raw data
-	pub(crate) fn read_raw(handle: &mut T, entry: &RegistryEntry) -> InternalResult<Vec<u8>> {
+	pub(crate) fn read_raw(
+		handle: &mut T,
+		entry: &RegistryEntry,
+	) -> InternalResult<Vec<u8>> {
 		let mut buffer = Vec::with_capacity(entry.offset as usize + 64);
 		handle.seek(SeekFrom::Start(entry.location))?;
 
@@ -246,7 +250,10 @@ where
 	}
 
 	/// Cheaper alternative to [`fetch`](Archive::fetch) that doesn't lock the underlying [Mutex]
-	pub fn fetch_mut(&mut self, id: impl AsRef<str>) -> InternalResult<Resource> {
+	pub fn fetch_mut(
+		&mut self,
+		id: impl AsRef<str>,
+	) -> InternalResult<Resource> {
 		if let Some(entry) = self.fetch_entry(&id) {
 			let raw = Archive::read_raw(self.handle.get_mut().unwrap(), &entry)?;
 			let (buffer, verified) = self.process(&entry, raw)?;
@@ -264,7 +271,10 @@ where
 
 	/// Fetch a [`Resource`] with the given `ID`.
 	/// Locks the underlying [`Mutex`], for a cheaper non-locking operation refer to [`Archive::fetch_mut`]
-	pub fn fetch(&self, id: impl AsRef<str>) -> InternalResult<Resource> {
+	pub fn fetch(
+		&self,
+		id: impl AsRef<str>,
+	) -> InternalResult<Resource> {
 		if let Some(entry) = self.fetch_entry(&id) {
 			let raw = {
 				let mut guard = self.handle.lock().unwrap();

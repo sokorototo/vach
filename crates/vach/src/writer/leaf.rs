@@ -1,5 +1,5 @@
-use crate::global::{reg_entry::RegistryEntry, flags::Flags};
 use crate::global::error::InternalResult;
+use crate::global::{flags::Flags, reg_entry::RegistryEntry};
 
 #[cfg(feature = "compression")]
 use crate::global::compressor::{CompressionAlgorithm, Compressor};
@@ -60,7 +60,10 @@ pub struct Leaf<R = &'static [u8]> {
 
 impl<R: Read + Send + Sync> Leaf<R> {
 	/// Creates a new [`Leaf`] wrapping around the given [`Read`] handle, with an ID
-	pub fn new<S: AsRef<str>>(handle: R, id: S) -> Leaf<R> {
+	pub fn new<S: AsRef<str>>(
+		handle: R,
+		id: S,
+	) -> Leaf<R> {
 		let default = Leaf::<&'static [u8]>::default();
 
 		Leaf {
@@ -83,7 +86,10 @@ impl<R: Read + Send + Sync> Leaf<R> {
 	}
 
 	/// Copy all fields from another [`Leaf`], except for `handle` and `id`.
-	pub fn template<R2>(self, other: &Leaf<R2>) -> Self {
+	pub fn template<R2>(
+		self,
+		other: &Leaf<R2>,
+	) -> Self {
 		Leaf {
 			handle: self.handle,
 			id: self.id,
@@ -105,40 +111,58 @@ impl<R: Read + Send + Sync> Leaf<R> {
 	/// Setter for the [`compress`](Leaf::compress) field
 	#[cfg(feature = "compression")]
 	#[cfg_attr(docsrs, doc(cfg(feature = "compression")))]
-	pub fn compress(mut self, compress: CompressMode) -> Self {
+	pub fn compress(
+		mut self,
+		compress: CompressMode,
+	) -> Self {
 		self.compress = compress;
 		self
 	}
 
 	/// Setter for the [`content_version`](Leaf::content_version) field
-	pub fn version(mut self, content_version: u8) -> Self {
+	pub fn version(
+		mut self,
+		content_version: u8,
+	) -> Self {
 		self.content_version = content_version;
 		self
 	}
 
 	/// Setter for the [`flags`](crate::builder::Flags) field
-	pub fn flags(mut self, flags: Flags) -> Self {
+	pub fn flags(
+		mut self,
+		flags: Flags,
+	) -> Self {
 		self.flags = flags;
 		self
 	}
 
 	/// Setter for the [`encrypt`](Leaf::encrypt) field
 	#[cfg(feature = "crypto")]
-	pub fn encrypt(mut self, encrypt: bool) -> Self {
+	pub fn encrypt(
+		mut self,
+		encrypt: bool,
+	) -> Self {
 		self.encrypt = encrypt;
 		self
 	}
 
 	/// Setter for the [`sign`](Leaf::sign) field
 	#[cfg(feature = "crypto")]
-	pub fn sign(mut self, sign: bool) -> Self {
+	pub fn sign(
+		mut self,
+		sign: bool,
+	) -> Self {
 		self.sign = sign;
 		self
 	}
 
 	/// Setter for the [`compression_algo`](Leaf::compression_algo) field
 	#[cfg(feature = "compression")]
-	pub fn compression_algo(mut self, compression_algo: CompressionAlgorithm) -> Self {
+	pub fn compression_algo(
+		mut self,
+		compression_algo: CompressionAlgorithm,
+	) -> Self {
 		self.compression_algo = compression_algo;
 		self
 	}
@@ -166,7 +190,8 @@ pub(crate) struct ProcessedLeaf {
 // Process Leaf into Prepared Data, externalised for multithreading purposes
 #[inline(never)]
 pub(crate) fn process_leaf<R: Read + Send + Sync>(
-	leaf: &mut Leaf<R>, _encryptor: Option<&Encryptor>,
+	leaf: &mut Leaf<R>,
+	_encryptor: Option<&Encryptor>,
 ) -> InternalResult<ProcessedLeaf> {
 	let mut entry: RegistryEntry = leaf.into();
 	let mut raw = Vec::new();

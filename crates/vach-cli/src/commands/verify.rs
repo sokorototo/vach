@@ -11,7 +11,10 @@ impl CommandTrait for Subcommand {
 		"0.2"
 	}
 
-	fn evaluate(&self, cli: cli::CommandLine) -> anyhow::Result<()> {
+	fn evaluate(
+		&self,
+		cli: cli::CommandLine,
+	) -> anyhow::Result<()> {
 		let cli::Command::Verify { input } = cli.command else {
 			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};

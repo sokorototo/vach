@@ -5,13 +5,13 @@ use std::{
 	path::PathBuf,
 };
 
+use indicatif::{ProgressBar, ProgressStyle};
 use tempfile::NamedTempFile;
 use vach::{crypto_utils, prelude::*};
-use indicatif::{ProgressBar, ProgressStyle};
 use walkdir;
 
 use super::CommandTrait;
-use crate::{cli};
+use crate::cli;
 
 struct FileAutoDropper(PathBuf, Option<File>);
 
@@ -27,7 +27,10 @@ impl FileAutoDropper {
 }
 
 impl Read for FileAutoDropper {
-	fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+	fn read(
+		&mut self,
+		buf: &mut [u8],
+	) -> io::Result<usize> {
 		// open file if None
 		let file = match self.1.as_mut() {
 			Some(file) => file,
@@ -55,7 +58,10 @@ impl CommandTrait for Subcommand {
 		"0.6"
 	}
 
-	fn evaluate(&self, args: cli::CommandLine) -> anyhow::Result<()> {
+	fn evaluate(
+		&self,
+		args: cli::CommandLine,
+	) -> anyhow::Result<()> {
 		// 1: Assemble Input Settings
 		let cli::Command::Pack {
 			output,
@@ -140,11 +146,7 @@ impl CommandTrait for Subcommand {
 				.filter_map(|path| match path.canonicalize() {
 					Ok(path) => Some(path),
 					Err(err) => {
-						eprintln!(
-							"Failed to canonicalize: {}. Skipping due to error: {}",
-							path.to_string_lossy(),
-							err
-						);
+						eprintln!("Failed to canonicalize: {}. Skipping due to error: {}", path.to_string_lossy(), err);
 						None
 					},
 				})
@@ -156,21 +158,13 @@ impl CommandTrait for Subcommand {
 		let path_filter = |path: &PathBuf| match path.canonicalize() {
 			Ok(canonical) => !excludes.iter().any(|p| canonical.starts_with(p)) && canonical.is_file(),
 			Err(err) => {
-				eprintln!(
-					"Failed to canonicalize: {}. Skipping due to error: {}",
-					path.to_string_lossy(),
-					err
-				);
+				eprintln!("Failed to canonicalize: {}. Skipping due to error: {}", path.to_string_lossy(), err);
 				false
 			},
 		};
 
 		if let Some(f) = inputs {
-			let iter = f
-				.into_iter()
-				.filter(path_filter)
-				.filter_map(FileAutoDropper::new)
-				.map(|l| l.template(&template));
+			let iter = f.into_iter().filter(path_filter).filter_map(FileAutoDropper::new).map(|l| l.template(&template));
 
 			leaves.extend(iter);
 		};
@@ -224,9 +218,7 @@ impl CommandTrait for Subcommand {
 			ProgressStyle::default_bar()
 				.template(super::PROGRESS_BAR_STYLE)?
 				.progress_chars("█░-")
-				.tick_chars(
-					"⢀ ⡀ ⠄ ⢂ ⡂ ⠅ ⢃ ⡃ ⠍ ⢋ ⡋ ⠍⠁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⢈⠩⡀⢙⠄⡙⢂⠩⡂⢘⠅⡘⢃⠨⡃⢐⠍⡐⢋⠠⡋⢀⠍⡁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⠈⠩ ⢙ ⡙ ⠩ ⢘ ⡘ ⠨ ⢐ ⡐ ⠠ ⢀ ⡀",
-				),
+				.tick_chars("⢀ ⡀ ⠄ ⢂ ⡂ ⠅ ⢃ ⡃ ⠍ ⢋ ⡋ ⠍⠁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⢈⠩⡀⢙⠄⡙⢂⠩⡂⢘⠅⡘⢃⠨⡃⢐⠍⡐⢋⠠⡋⢀⠍⡁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⠈⠩ ⢙ ⡙ ⠩ ⢘ ⡘ ⠨ ⢐ ⡐ ⠠ ⢀ ⡀"),
 		);
 
 		// increments progress-bar by one for each entry
@@ -240,11 +232,7 @@ impl CommandTrait for Subcommand {
 		let bytes_written = dump(&mut temporary_file, &mut leaves, &config, Some(&mut callback))?;
 		temporary_file.persist(&output)?;
 
-		progress.println(format!(
-			"Generated a new archive @ {}; Bytes written: {}",
-			output.display(),
-			bytes_written
-		));
+		progress.println(format!("Generated a new archive @ {}; Bytes written: {}", output.display(), bytes_written));
 
 		progress.finish();
 

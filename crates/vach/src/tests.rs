@@ -1,8 +1,8 @@
 // This is meant to mirror as closely as possible, how users should use the crate
 #![cfg(test)]
 
-use std::{fs::File, str};
 use crate::prelude::*;
+use std::{fs::File, str};
 
 // Contains both the public key and secret key in the same file:
 // secret -> [u8; crate::SECRET_KEY_LENGTH], public -> [u8; crate::PUBLIC_KEY_LENGTH]
@@ -21,7 +21,8 @@ const CUSTOM_FLAG_3: u32 = 0b0000_0000_0000_0000_0000_0000_1000_0000;
 const CUSTOM_FLAG_4: u32 = 0b0000_0000_0000_0000_0000_0000_0001_0000;
 
 fn leaves_from_dir<'a>(
-	path: impl AsRef<std::path::Path>, template: Option<&Leaf<&'static [u8]>>,
+	path: impl AsRef<std::path::Path>,
+	template: Option<&Leaf<&'static [u8]>>,
 ) -> InternalResult<Vec<Leaf<File>>> {
 	use std::fs;
 
@@ -103,19 +104,14 @@ fn flags_set_intersects() {
 #[cfg(all(feature = "compression", feature = "builder"))]
 fn builder_no_signature() {
 	let mut poem_flags = Flags::default();
-	poem_flags
-		.set(CUSTOM_FLAG_1 | CUSTOM_FLAG_2 | CUSTOM_FLAG_3 | CUSTOM_FLAG_4, true)
-		.unwrap();
+	poem_flags.set(CUSTOM_FLAG_1 | CUSTOM_FLAG_2 | CUSTOM_FLAG_3 | CUSTOM_FLAG_4, true).unwrap();
 
 	let mut leaves = [
 		Leaf::new(File::open("test_data/song.txt").unwrap(), "song").compress(CompressMode::Never),
 		Leaf::new(File::open("test_data/lorem.txt").unwrap(), "lorem"),
 		Leaf::new(File::open("test_data/bee.script").unwrap(), "script"),
 		Leaf::new(File::open("test_data/quicksort.wasm").unwrap(), "wasm"),
-		Leaf::new(File::open("test_data/poem.txt").unwrap(), "poem")
-			.compress(CompressMode::Always)
-			.version(10)
-			.flags(poem_flags),
+		Leaf::new(File::open("test_data/poem.txt").unwrap(), "poem").compress(CompressMode::Always).version(10).flags(poem_flags),
 	];
 
 	let mut target = File::create(SIMPLE_TARGET).unwrap();
@@ -181,10 +177,7 @@ fn fetch_with_signature() -> InternalResult {
 	let target = File::open(SIGNED_TARGET)?;
 	let mut archive = Archive::with_key(target, &vk)?;
 
-	assert!(
-		archive.flags().contains(CUSTOM_FLAG_4),
-		"Flags did not complete roundtrip"
-	);
+	assert!(archive.flags().contains(CUSTOM_FLAG_4), "Flags did not complete roundtrip");
 
 	let resource = archive.fetch_mut("bytez")?;
 	assert_eq!(resource.data.len(), 12);
@@ -365,15 +358,9 @@ fn test_compressors() -> InternalResult {
 	dump(
 		&mut target,
 		&mut [
-			Leaf::new(input.as_slice(), "LZ4")
-				.compression_algo(CompressionAlgorithm::LZ4)
-				.compress(CompressMode::Always),
-			Leaf::new(input.as_slice(), "BROTLI")
-				.compression_algo(CompressionAlgorithm::Brotli(9))
-				.compress(CompressMode::Always),
-			Leaf::new(input.as_slice(), "SNAPPY")
-				.compression_algo(CompressionAlgorithm::Snappy)
-				.compress(CompressMode::Always),
+			Leaf::new(input.as_slice(), "LZ4").compression_algo(CompressionAlgorithm::LZ4).compress(CompressMode::Always),
+			Leaf::new(input.as_slice(), "BROTLI").compression_algo(CompressionAlgorithm::Brotli(9)).compress(CompressMode::Always),
+			Leaf::new(input.as_slice(), "SNAPPY").compression_algo(CompressionAlgorithm::Snappy).compress(CompressMode::Always),
 		],
 		None,
 		None,
@@ -411,8 +398,8 @@ fn test_compressors() -> InternalResult {
 #[test]
 #[cfg(all(feature = "multithreaded", feature = "archive"))]
 fn test_batch_fetching() -> InternalResult {
-	use std::{io::Cursor, collections::HashMap};
 	use rayon::prelude::*;
+	use std::{collections::HashMap, io::Cursor};
 
 	// Define input constants
 	const INPUT_LEN: usize = 8;
@@ -431,18 +418,16 @@ fn test_batch_fetching() -> InternalResult {
 	dump(&mut target, leaves.as_mut_slice(), Some(config), None)?;
 
 	let archive = Archive::new(target)?;
-	let mut resources = ids
-		.as_slice()
-		.par_iter()
-		.map(|id| (id.as_str(), archive.fetch(&id)))
-		.collect::<HashMap<_, _>>();
+	let mut resources = ids.as_slice().par_iter().map(|id| (id.as_str(), archive.fetch(&id))).collect::<HashMap<_, _>>();
 
 	// Tests and checks
 	assert!(resources.get("NON_EXISTENT").is_none());
 	assert!(resources.get("ERRORS").is_some());
 
 	match resources.remove("ERRORS").unwrap() {
-		Ok(_) => return Err(InternalError::OtherError("This should be an error".into())),
+		Ok(_) => {
+			return Err(InternalError::OtherError("This should be an error".into()));
+		},
 		Err(err) => match err {
 			InternalError::MissingResourceError(_) => {
 				resources.remove("ERRORS");

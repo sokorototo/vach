@@ -1,5 +1,5 @@
-use std::{fmt, io::Read, sync::Arc};
 use super::{error::*, flags::Flags};
+use std::{fmt, io::Read, sync::Arc};
 
 #[cfg(feature = "crypto")]
 use crate::crypto;
@@ -91,7 +91,10 @@ impl RegistryEntry {
 	}
 
 	/// Serializes a [`RegistryEntry`] struct into an array of bytes
-	pub(crate) fn to_bytes(&self, _skip_signature: bool) -> InternalResult<Vec<u8>> {
+	pub(crate) fn to_bytes(
+		&self,
+		_skip_signature: bool,
+	) -> InternalResult<Vec<u8>> {
 		// Make sure the ID is not too big or else it will break the archive
 		let id = self.id.as_ref();
 
@@ -132,7 +135,10 @@ impl Default for RegistryEntry {
 }
 
 impl fmt::Display for RegistryEntry {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+	fn fmt(
+		&self,
+		f: &mut fmt::Formatter,
+	) -> fmt::Result {
 		write!(
 			f,
 			"[RegistryEntry] location: {}, length: {}, content_version: {}, flags: {}",

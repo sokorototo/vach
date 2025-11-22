@@ -101,8 +101,8 @@ pub mod crypto;
 #[cfg(feature = "builder")]
 #[cfg_attr(docsrs, doc(cfg(feature = "builder")))]
 pub mod builder {
-	pub use crate::writer::*;
 	pub use crate::global::{error::*, flags::Flags};
+	pub use crate::writer::*;
 
 	#[cfg(feature = "compression")]
 	pub use crate::global::compressor::CompressionAlgorithm;
@@ -112,10 +112,10 @@ pub mod builder {
 #[cfg(feature = "archive")]
 #[cfg_attr(docsrs, doc(cfg(feature = "archive")))]
 pub mod archive {
-	pub use crate::loader::{archive::Archive, resource::Resource};
-	pub use crate::global::{reg_entry::RegistryEntry, error::*, flags::Flags};
 	#[cfg(feature = "compression")]
 	pub use crate::global::compressor::CompressionAlgorithm;
+	pub use crate::global::{error::*, flags::Flags, reg_entry::RegistryEntry};
+	pub use crate::loader::{archive::Archive, resource::Resource};
 }
 
 /// Some utility functions to keep you happy

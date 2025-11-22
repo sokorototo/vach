@@ -1,8 +1,8 @@
 use std::io;
 
-use criterion::{Criterion, black_box, criterion_group, criterion_main, Throughput};
-use vach::prelude::*;
+use criterion::{Criterion, Throughput, black_box, criterion_group, criterion_main};
 use vach::crypto_utils::{gen_keypair, read_verifying_key};
+use vach::prelude::*;
 
 // Remove io overhead by Sinking data into the void
 struct Sink(u64);
@@ -14,7 +14,10 @@ impl Sink {
 }
 
 impl io::Seek for Sink {
-	fn seek(&mut self, seek: io::SeekFrom) -> io::Result<u64> {
+	fn seek(
+		&mut self,
+		seek: io::SeekFrom,
+	) -> io::Result<u64> {
 		match seek {
 			io::SeekFrom::Start(s) => self.0 = s,
 			io::SeekFrom::Current(s) => self.0 = (self.0 as i64 + s) as u64,
@@ -26,7 +29,10 @@ impl io::Seek for Sink {
 }
 
 impl io::Write for Sink {
-	fn write(&mut self, sequence: &[u8]) -> io::Result<usize> {
+	fn write(
+		&mut self,
+		sequence: &[u8],
+	) -> io::Result<usize> {
 		Ok(sequence.len())
 	}
 

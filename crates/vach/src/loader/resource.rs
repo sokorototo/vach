@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::global::flags::Flags;
+use std::fmt;
 
 /// Basically processed data obtained from an archive returned by [`archive.fetch(...)`](crate::archive::Archive::fetch) and [`archive.fetch_mut(...)`](crate::archive::Archive::fetch_mut)
 #[derive(Debug, Clone)]
@@ -15,7 +15,10 @@ pub struct Resource {
 }
 
 impl fmt::Display for Resource {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+	fn fmt(
+		&self,
+		f: &mut fmt::Formatter,
+	) -> fmt::Result {
 		write!(
 			f,
 			"[Resource] size: {size} bytes, content version: {version}, flags: {flags}",

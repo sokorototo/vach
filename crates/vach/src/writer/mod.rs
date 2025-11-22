@@ -1,4 +1,4 @@
-use std::io::{Seek, SeekFrom, Write, Read};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 mod config;
 mod leaf;
@@ -7,7 +7,7 @@ pub use config::BuilderConfig;
 pub use leaf::Leaf;
 
 #[cfg(feature = "compression")]
-pub use {leaf::CompressMode, crate::global::compressor::Compressor};
+pub use {crate::global::compressor::Compressor, leaf::CompressMode};
 
 use crate::global::error::*;
 use crate::global::{header::Header, reg_entry::RegistryEntry};
@@ -28,7 +28,10 @@ struct WriteCounter<W: Send> {
 }
 
 impl<W: Write + Send> Write for WriteCounter<W> {
-	fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+	fn write(
+		&mut self,
+		buf: &[u8],
+	) -> std::io::Result<usize> {
 		let len = self.inner.write(buf)?;
 		self.bytes += len as u64;
 		Ok(len)
@@ -40,14 +43,19 @@ impl<W: Write + Send> Write for WriteCounter<W> {
 }
 
 impl<W: Seek + Send> Seek for WriteCounter<W> {
-	fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+	fn seek(
+		&mut self,
+		pos: SeekFrom,
+	) -> std::io::Result<u64> {
 		self.inner.seek(pos)
 	}
 }
 
 /// iterates over all [`Leaf`], processes them and writes the output into the target. returns bytes written to `target`
 pub fn dump<'a, W, R>(
-	target: W, leaves: &mut [Leaf<R>], config: Option<BuilderConfig>,
+	target: W,
+	leaves: &mut [Leaf<R>],
+	config: Option<BuilderConfig>,
 	mut callback: Option<&mut dyn FnMut(&RegistryEntry, &[u8])>,
 ) -> InternalResult<u64>
 where
@@ -55,10 +63,7 @@ where
 	R: Read + Sync + Send,
 {
 	let mut config = config.unwrap_or_default();
-	let mut target = WriteCounter {
-		bytes: 0,
-		inner: target,
-	};
+	let mut target = WriteCounter { bytes: 0, inner: target };
 
 	// find duplicates
 	let mut set = std::collections::HashSet::with_capacity(leaves.len());
@@ -173,7 +178,7 @@ where
 
 	// only spawn threads if `multithreaded` feature is enabled
 	if config.num_threads >= 1 && cfg!(feature = "multithreaded") {
-		use std::{thread, sync::mpsc};
+		use std::{sync::mpsc, thread};
 
 		let (tx, rx) = mpsc::sync_channel(leaves.len());
 		thread::scope(|s| -> InternalResult<()> {
@@ -220,10 +225,7 @@ where
 		})?;
 	} else {
 		// processed all on the main thread baby!
-		leaves
-			.iter_mut()
-			.map(|l| leaf::process_leaf(l, encryptor.as_ref()))
-			.try_for_each(write)?;
+		leaves.iter_mut().map(|l| leaf::process_leaf(l, encryptor.as_ref())).try_for_each(write)?;
 	};
 
 	// write UPDATED REGISTRY

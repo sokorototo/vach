@@ -92,7 +92,7 @@ void free_entries(struct v_entries *entries);
 struct v_resource *archive_fetch_resource(v_archive *archive, const char *id, int32_t *error_p);
 
 // Fetch a resource, LOCKS the internal Mutex. For use in multithreaded environments
-struct v_resource *archive_fetch_resource_lock(const v_archive *archive, const int8_t *id, int32_t *error_p);
+struct v_resource *archive_fetch_resource_locked(const v_archive *archive, const int8_t *id, int32_t *error_p);
 
 void free_resource(struct v_resource *resource);
 

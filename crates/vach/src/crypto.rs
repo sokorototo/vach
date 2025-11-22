@@ -4,8 +4,8 @@ use std::fmt;
 
 use aes_gcm::aead::Aead;
 use aes_gcm::aes::cipher::consts::U12;
-use aes_gcm::{Aes256Gcm, Nonce, KeyInit};
-pub use ed25519_dalek::{SigningKey, VerifyingKey, Signature};
+use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
+pub use ed25519_dalek::{Signature, SigningKey, VerifyingKey};
 
 use crate::global::error::{InternalError, InternalResult};
 
@@ -16,11 +16,11 @@ pub(crate) struct Encryptor {
 }
 
 impl fmt::Debug for Encryptor {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_struct("Encryptor")
-			.field("cipher", &"Aes256Gcm")
-			.field("nonce", &self.nonce)
-			.finish()
+	fn fmt(
+		&self,
+		f: &mut fmt::Formatter<'_>,
+	) -> fmt::Result {
+		f.debug_struct("Encryptor").field("cipher", &"Aes256Gcm").field("nonce", &self.nonce).finish()
 	}
 }
 
@@ -40,15 +40,17 @@ impl Encryptor {
 	}
 
 	// The meat and the mass of this struct
-	pub(crate) fn encrypt(&self, data: &[u8]) -> InternalResult<Vec<u8>> {
-		self.cipher
-			.encrypt(&self.nonce, data)
-			.map_err(InternalError::CryptoError)
+	pub(crate) fn encrypt(
+		&self,
+		data: &[u8],
+	) -> InternalResult<Vec<u8>> {
+		self.cipher.encrypt(&self.nonce, data).map_err(InternalError::CryptoError)
 	}
 
-	pub(crate) fn decrypt(&self, data: &[u8]) -> InternalResult<Vec<u8>> {
-		self.cipher
-			.decrypt(&self.nonce, data)
-			.map_err(InternalError::CryptoError)
+	pub(crate) fn decrypt(
+		&self,
+		data: &[u8],
+	) -> InternalResult<Vec<u8>> {
+		self.cipher.decrypt(&self.nonce, data).map_err(InternalError::CryptoError)
 	}
 }

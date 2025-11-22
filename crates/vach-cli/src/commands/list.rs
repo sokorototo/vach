@@ -1,11 +1,11 @@
 use std::fs::File;
 
+use indicatif::HumanBytes;
 use tabled::{
 	Table, Tabled,
-	settings::{*, object::Columns},
+	settings::{object::Columns, *},
 };
 use vach::prelude::*;
-use indicatif::HumanBytes;
 
 use super::CommandTrait;
 use crate::cli;
@@ -26,7 +26,10 @@ impl CommandTrait for Subcommand {
 		"0.3"
 	}
 
-	fn evaluate(&self, cli: cli::CommandLine) -> anyhow::Result<()> {
+	fn evaluate(
+		&self,
+		cli: cli::CommandLine,
+	) -> anyhow::Result<()> {
 		let cli::Command::List { input, sort } = cli.command else {
 			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};
@@ -68,9 +71,7 @@ impl CommandTrait for Subcommand {
 			.collect();
 
 		let mut table = Table::new(table_entries);
-		table
-			.with(Style::rounded())
-			.with(Modify::list(Columns::new(..1), Alignment::left()));
+		table.with(Style::rounded()).with(Modify::list(Columns::new(..1), Alignment::left()));
 
 		println!("{}", table);
 

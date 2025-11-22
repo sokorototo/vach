@@ -1,5 +1,5 @@
-use std::{path::PathBuf, thread};
 use clap::{Parser, Subcommand, ValueEnum};
+use std::{path::PathBuf, thread};
 
 use crate::commands::{self, CommandTrait};
 

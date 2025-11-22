@@ -7,8 +7,8 @@ use std::{
 	time::Instant,
 };
 
-use vach::{crypto_utils, prelude::*};
 use indicatif::{ProgressBar, ProgressStyle};
+use vach::{crypto_utils, prelude::*};
 
 use super::CommandTrait;
 use crate::cli;
@@ -20,7 +20,10 @@ impl CommandTrait for Subcommand {
 		"0.2"
 	}
 
-	fn evaluate(&self, cli: cli::CommandLine) -> anyhow::Result<()> {
+	fn evaluate(
+		&self,
+		cli: cli::CommandLine,
+	) -> anyhow::Result<()> {
 		let cli::Command::Unpack {
 			input,
 			output,
@@ -76,9 +79,7 @@ impl CommandTrait for Subcommand {
 		let archive = match archive {
 			Ok(archive) => archive,
 			Err(err) => match err {
-				InternalError::NoKeypairError => anyhow::bail!(
-					"Please provide a public key or a keypair for use in decryption or signature verification"
-				),
+				InternalError::NoKeypairError => anyhow::bail!("Please provide a public key or a keypair for use in decryption or signature verification"),
 				InternalError::MalformedArchiveSource(_) => anyhow::bail!("Unable to validate the archive: {}", err),
 				err => anyhow::bail!("Encountered an error: {}", err.to_string()),
 			},
@@ -93,18 +94,16 @@ impl CommandTrait for Subcommand {
 }
 
 fn extract_archive<T: Read + Seek + Send + Sync>(
-	archive: &Archive<T>, target_folder: PathBuf, jobs: usize, chunk_size: Option<usize>,
+	archive: &Archive<T>,
+	target_folder: PathBuf,
+	jobs: usize,
+	chunk_size: Option<usize>,
 ) -> anyhow::Result<()> {
 	// For measuring the time difference
 	let time = Instant::now();
 	fs::create_dir_all(&target_folder)?;
 
-	let total_size = archive
-		.entries()
-		.iter()
-		.map(|(_, entry)| entry.offset)
-		.reduce(|a, b| a + b)
-		.unwrap_or(0);
+	let total_size = archive.entries().iter().map(|(_, entry)| entry.offset).reduce(|a, b| a + b).unwrap_or(0);
 
 	let pbar = ProgressBar::new(total_size);
 
@@ -112,9 +111,7 @@ fn extract_archive<T: Read + Seek + Send + Sync>(
 		ProgressStyle::default_bar()
 			.template(super::PROGRESS_BAR_STYLE)?
 			.progress_chars("█░-")
-			.tick_chars(
-				"⢀ ⡀ ⠄ ⢂ ⡂ ⠅ ⢃ ⡃ ⠍ ⢋ ⡋ ⠍⠁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⢈⠩⡀⢙⠄⡙⢂⠩⡂⢘⠅⡘⢃⠨⡃⢐⠍⡐⢋⠠⡋⢀⠍⡁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⠈⠩ ⢙ ⡙ ⠩ ⢘ ⡘ ⠨ ⢐ ⡐ ⠠ ⢀ ⡀",
-			),
+			.tick_chars("⢀ ⡀ ⠄ ⢂ ⡂ ⠅ ⢃ ⡃ ⠍ ⢋ ⡋ ⠍⠁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⢈⠩⡀⢙⠄⡙⢂⠩⡂⢘⠅⡘⢃⠨⡃⢐⠍⡐⢋⠠⡋⢀⠍⡁⢋⠁⡋⠁⠍⠉⠋⠉⠋⠉⠉⠙⠉⠙⠉⠩⠈⢙⠈⡙⠈⠩ ⢙ ⡙ ⠩ ⢘ ⡘ ⠨ ⢐ ⡐ ⠠ ⢀ ⡀"),
 	);
 
 	// Extract all entries in parallel
@@ -182,11 +179,7 @@ fn extract_archive<T: Read + Seek + Send + Sync>(
 
 	// Finished extracting
 	pbar.finish();
-	println!(
-		"Extracted {} files in {}s",
-		archive.entries().len(),
-		time.elapsed().as_secs_f64()
-	);
+	println!("Extracted {} files in {}s", archive.entries().len(), time.elapsed().as_secs_f64());
 
 	Ok(())
 }

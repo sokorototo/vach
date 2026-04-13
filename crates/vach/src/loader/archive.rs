@@ -77,13 +77,11 @@ impl<T> Archive<T> {
 		if let Some(pk) = self.key {
 			// If there is an error the data is flagged as invalid
 			if let Some(signature) = entry.signature {
-				let raw_size = raw.len();
-
-				let entry_bytes = entry.to_bytes(true)?;
-				raw.extend_from_slice(&entry_bytes);
+				let id_bytes = entry.id.as_bytes();
+				raw.extend_from_slice(id_bytes);
 
 				verified = pk.verify_strict(&raw, &signature).is_ok();
-				raw.truncate(raw_size);
+				raw.truncate(raw.len() - id_bytes.len());
 			}
 		}
 
@@ -91,8 +89,9 @@ impl<T> Archive<T> {
 		if entry.flags.contains(Flags::ENCRYPTED_FLAG) {
 			#[cfg(feature = "crypto")]
 			match self.decryptor.as_ref() {
-				Some(dc) => {
-					decrypted = Some(dc.decrypt(&raw)?);
+				Some(dc) => match entry.nonce.as_ref() {
+					Some(n) => decrypted = Some(dc.decrypt(&raw, n)?),
+					None => return Err(InternalError::OtherError(format!("Entry {} is flagged as encrypted but doesn't contain a nonce", entry.id).into())),
 				},
 				None => return Err(InternalError::NoKeypairError),
 			}
@@ -202,7 +201,7 @@ where
 			header,
 			handle: Mutex::new(handle),
 			entries,
-			key: Some(vk.clone()),
+			key: Some(*vk),
 			decryptor: Some(crypto::Encryptor::new(vk)),
 		};
 
@@ -259,7 +258,6 @@ where
 			let (buffer, verified) = self.process(&entry, raw)?;
 
 			Ok(Resource {
-				content_version: entry.content_version,
 				flags: entry.flags,
 				data: buffer.into_boxed_slice(),
 				verified,
@@ -285,7 +283,6 @@ where
 			let (buffer, is_secure) = self.process(&entry, raw)?;
 
 			Ok(Resource {
-				content_version: entry.content_version,
 				flags: entry.flags,
 				data: buffer.into_boxed_slice(),
 				verified: is_secure,

@@ -1,5 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![allow(clippy::or_fun_call, clippy::manual_map)]
+#![allow(clippy::or_fun_call, clippy::manual_map, unused_mut, clippy::type_complexity)]
 #![deny(missing_docs)]
 #![forbid(unsafe_code)]
 
@@ -67,6 +67,9 @@ pub const PUBLIC_KEY_LENGTH: usize = 32;
 
 /// Size of a signature
 pub const SIGNATURE_LENGTH: usize = 64;
+
+/// Size of a cryptographic aes256-gcm nonce
+pub const NONCE_LENGTH: usize = 12;
 
 /// Maximum size for any ID, ie u16::MAX
 pub const MAX_ID_LENGTH: usize = u16::MAX as usize;

@@ -56,7 +56,6 @@ typedef struct v_resource {
   uint8_t *data;
   uintptr_t len;
   unsigned int flags;
-  uint8_t content_version;
   bool verified;
 } v_resource;
 

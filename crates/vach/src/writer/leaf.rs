@@ -34,8 +34,6 @@ pub struct Leaf<R = &'static [u8]> {
 
 	/// The `ID` under which the embedded data will be referenced
 	pub id: Arc<str>,
-	/// The version of the content, allowing you to track obsolete data.
-	pub content_version: u8,
 	/// The flags that will go into the archive write target.
 	pub flags: Flags,
 
@@ -71,7 +69,6 @@ impl<R: Read + Send + Sync> Leaf<R> {
 			id: Arc::from(id.as_ref()),
 
 			// copy from default implementation
-			content_version: default.content_version,
 			flags: default.flags,
 
 			#[cfg(feature = "compression")]
@@ -94,7 +91,6 @@ impl<R: Read + Send + Sync> Leaf<R> {
 			handle: self.handle,
 			id: self.id,
 
-			content_version: other.content_version,
 			flags: other.flags,
 
 			#[cfg(feature = "compression")]
@@ -116,15 +112,6 @@ impl<R: Read + Send + Sync> Leaf<R> {
 		compress: CompressMode,
 	) -> Self {
 		self.compress = compress;
-		self
-	}
-
-	/// Setter for the [`content_version`](Leaf::content_version) field
-	pub fn version(
-		mut self,
-		content_version: u8,
-	) -> Self {
-		self.content_version = content_version;
 		self
 	}
 
@@ -166,6 +153,23 @@ impl<R: Read + Send + Sync> Leaf<R> {
 		self.compression_algo = compression_algo;
 		self
 	}
+
+	pub(crate) fn calculate_entry_bytes(
+		&self,
+		sign: bool,
+	) -> usize {
+		#[cfg(feature = "crypto")]
+		let sig_len = if sign && self.sign { crate::SIGNATURE_LENGTH } else { 0 };
+		#[cfg(not(feature = "crypto"))]
+		let sig_len = 0;
+
+		#[cfg(feature = "crypto")]
+		let nonce_len = if sign && self.encrypt { crate::NONCE_LENGTH } else { 0 };
+		#[cfg(not(feature = "crypto"))]
+		let nonce_len = 0;
+
+		self.id.len() + RegistryEntry::CONSTANT + sig_len + nonce_len
+	}
 }
 
 impl<R> From<&mut Leaf<R>> for RegistryEntry {
@@ -173,7 +177,6 @@ impl<R> From<&mut Leaf<R>> for RegistryEntry {
 		RegistryEntry {
 			id: leaf.id.clone(),
 			flags: leaf.flags,
-			content_version: leaf.content_version,
 			..RegistryEntry::empty()
 		}
 	}
@@ -183,14 +186,13 @@ impl<R> From<&mut Leaf<R>> for RegistryEntry {
 pub(crate) struct ProcessedLeaf {
 	pub(crate) data: Vec<u8>,
 	pub(crate) entry: RegistryEntry,
-	#[cfg(feature = "crypto")]
-	pub(crate) sign: bool,
 }
 
 // Process Leaf into Prepared Data, externalised for multithreading purposes
 #[inline(never)]
 pub(crate) fn process_leaf<R: Read + Send + Sync>(
 	leaf: &mut Leaf<R>,
+	config: &super::BuilderConfig,
 	_encryptor: Option<&Encryptor>,
 ) -> InternalResult<ProcessedLeaf> {
 	let mut entry: RegistryEntry = leaf.into();
@@ -240,17 +242,32 @@ pub(crate) fn process_leaf<R: Read + Send + Sync>(
 
 	// Encryption comes second
 	#[cfg(feature = "crypto")]
-	if leaf.encrypt {
-		if let Some(ex) = _encryptor {
-			raw = ex.encrypt(&raw)?;
-			entry.flags.force_set(Flags::ENCRYPTED_FLAG, true);
-		}
+	if let Some(ex) = _encryptor
+		&& leaf.encrypt
+	{
+		entry.flags.force_set(Flags::ENCRYPTED_FLAG, true);
+		let (_raw, nonce) = ex.encrypt(&raw)?;
+
+		raw = _raw;
+		entry.nonce = Some(nonce);
 	}
 
-	Ok(ProcessedLeaf {
-		data: raw,
-		entry,
-		#[cfg(feature = "crypto")]
-		sign: leaf.sign,
-	})
+	// Sign final data as-is in binary
+	#[cfg(feature = "crypto")]
+	if let Some(keypair) = &config.signing_key
+		&& leaf.sign
+	{
+		entry.flags.force_set(Flags::SIGNED_FLAG, true);
+
+		let entry_bytes = entry.id.as_bytes();
+		raw.extend_from_slice(entry_bytes);
+
+		// Include entry id in the signature
+		entry.signature = Some(ed25519_dalek::Signer::sign(keypair, &raw));
+
+		// truncate leaf data as it's not indicative of serialized data
+		raw.truncate(raw.len() - entry.id.len());
+	};
+
+	Ok(ProcessedLeaf { data: raw, entry })
 }

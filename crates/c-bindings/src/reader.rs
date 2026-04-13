@@ -150,7 +150,6 @@ pub struct v_resource {
 	data: *mut u8,
 	len: usize,
 	flags: ffi::c_uint,
-	content_version: u8,
 	verified: bool,
 }
 
@@ -180,7 +179,6 @@ pub extern "C" fn archive_fetch_resource(
 		len: resource.data.len(),
 		data: Box::leak(resource.data).as_mut_ptr(),
 		flags: resource.flags.bits(),
-		content_version: resource.content_version,
 		verified: resource.verified,
 	};
 
@@ -213,7 +211,6 @@ pub extern "C" fn archive_fetch_resource_locked(
 		len: resource.data.len(),
 		data: Box::leak(resource.data).as_mut_ptr(),
 		flags: resource.flags.bits(),
-		content_version: resource.content_version,
 		verified: resource.verified,
 	};
 

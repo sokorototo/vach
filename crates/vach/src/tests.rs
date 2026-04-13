@@ -101,6 +101,47 @@ fn flags_set_intersects() {
 }
 
 #[test]
+#[cfg(feature = "crypto")]
+fn registry_entry_roundtrip() {
+	let entries = [
+		RegistryEntry {
+			id: "brotato".into(),
+			flags: Flags { bits: Flags::COMPRESSED_FLAG },
+			location: 12,
+			offset: 360,
+			signature: None,
+			nonce: None,
+		},
+		RegistryEntry {
+			id: "potato".into(),
+			flags: Flags {
+				bits: Flags::ENCRYPTED_FLAG | Flags::SIGNED_FLAG,
+			},
+			location: 120,
+			offset: 3600,
+			signature: Some([12u8; crate::SIGNATURE_LENGTH].into()),
+			nonce: Some([34u8; crate::NONCE_LENGTH]),
+		},
+		RegistryEntry {
+			id: "tomato".into(),
+			flags: Flags { bits: Flags::SIGNED_FLAG },
+			location: 1200,
+			offset: 36000,
+			signature: Some([12u8; crate::SIGNATURE_LENGTH].into()),
+			nonce: None,
+		},
+	];
+
+	for entry in entries {
+		let data = entry.to_bytes().unwrap();
+		let mut cursor = std::io::Cursor::new(data);
+
+		let parsed = RegistryEntry::from_handle(&mut cursor).unwrap();
+		assert_eq!(entry, parsed);
+	}
+}
+
+#[test]
 #[cfg(all(feature = "compression", feature = "builder"))]
 fn builder_no_signature() {
 	let mut poem_flags = Flags::default();
@@ -111,7 +152,7 @@ fn builder_no_signature() {
 		Leaf::new(File::open("test_data/lorem.txt").unwrap(), "lorem"),
 		Leaf::new(File::open("test_data/bee.script").unwrap(), "script"),
 		Leaf::new(File::open("test_data/quicksort.wasm").unwrap(), "wasm"),
-		Leaf::new(File::open("test_data/poem.txt").unwrap(), "poem").compress(CompressMode::Always).version(10).flags(poem_flags),
+		Leaf::new(File::open("test_data/poem.txt").unwrap(), "poem").compress(CompressMode::Always).flags(poem_flags),
 	];
 
 	let mut target = File::create(SIMPLE_TARGET).unwrap();
@@ -204,8 +245,8 @@ fn decryptor_test() -> InternalResult {
 	let crypt = Encryptor::new(&vk);
 	let data = vec![12, 12, 12, 12];
 
-	let ciphertext = crypt.encrypt(&data)?;
-	let plaintext = crypt.decrypt(&ciphertext)?;
+	let (ciphertext, nonce) = crypt.encrypt(&data)?;
+	let plaintext = crypt.decrypt(&ciphertext, &nonce)?;
 
 	assert_ne!(&plaintext, &ciphertext);
 	assert_eq!(&plaintext, &data);
@@ -294,7 +335,7 @@ fn consolidated_test() -> InternalResult {
 	config.signing_key = read_secret_key(&keypair_bytes[..ed25519_dalek::SECRET_KEY_LENGTH]).ok();
 
 	// Add data
-	let template = Leaf::<&'static [u8]>::default().encrypt(true).version(59).sign(true);
+	let template = Leaf::<&'static [u8]>::default().encrypt(true).sign(true);
 	let mut leaves = [
 		Leaf::new(data_1, "d1").template(&template),
 		Leaf::new(data_2, "d2").template(&template),
@@ -321,9 +362,9 @@ fn consolidated_test() -> InternalResult {
 	// Quick assertions
 	let then = Instant::now();
 
-	assert_eq!(archive.fetch_mut("d1")?.data.as_ref(), data_1);
-	assert_eq!(archive.fetch_mut("d2")?.data.as_ref(), data_2);
-	assert_eq!(archive.fetch_mut("d3")?.data.as_ref(), data_3);
+	assert_eq!(archive.fetch_mut("d1").unwrap().data.as_ref(), data_1);
+	assert_eq!(archive.fetch_mut("d2").unwrap().data.as_ref(), data_2);
+	assert_eq!(archive.fetch_mut("d3").unwrap().data.as_ref(), data_3);
 
 	println!("Fetching took: {:?} on average on {}", then.elapsed() / 3, archive);
 

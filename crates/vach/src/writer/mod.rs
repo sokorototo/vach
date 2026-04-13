@@ -13,10 +13,7 @@ use crate::global::error::*;
 use crate::global::{header::Header, reg_entry::RegistryEntry};
 
 #[cfg(feature = "crypto")]
-use {
-	crate::{crypto::Encryptor, global::flags::Flags},
-	ed25519_dalek::Signer,
-};
+use crate::{crypto::Encryptor, global::flags::Flags};
 
 #[cfg(not(feature = "crypto"))]
 type Encryptor = ();
@@ -52,7 +49,7 @@ impl<W: Seek + Send> Seek for WriteCounter<W> {
 }
 
 /// iterates over all [`Leaf`], processes them and writes the output into the target. returns bytes written to `target`
-pub fn dump<'a, W, R>(
+pub fn dump<W, R>(
 	target: W,
 	leaves: &mut [Leaf<R>],
 	config: Option<BuilderConfig>,
@@ -75,25 +72,10 @@ where
 
 	// Determines the offset at which to start writing leafs
 	let mut leaf_offset = {
-		leaves
-			.iter()
-			.map(|leaf| {
-				// The size of it's ID, the minimum size of an entry without a signature, and the size of a signature if present
-				leaf.id.len() + RegistryEntry::MIN_SIZE + {
-					#[cfg(feature = "crypto")]
-					if config.signing_key.is_some() && leaf.sign {
-						crate::SIGNATURE_LENGTH
-					} else {
-						0
-					}
-					#[cfg(not(feature = "crypto"))]
-					{
-						0
-					}
-				}
-			})
-			.sum::<usize>()
-			+ Header::BASE_SIZE
+		Header::BASE_SIZE + {
+			let sign = config.signing_key.is_some();
+			leaves.iter().map(|leaf| leaf.calculate_entry_bytes(sign)).sum::<usize>()
+		}
 	} as u64;
 
 	#[cfg(feature = "crypto")]
@@ -137,40 +119,26 @@ where
 	#[allow(unused_mut)]
 	// Callback for processing IO
 	let mut write = |result: InternalResult<leaf::ProcessedLeaf>| -> InternalResult<()> {
-		let mut result = result?;
-		let bytes = result.data.len() as u64;
+		let mut processed = result?;
+		let bytes = processed.data.len() as u64;
 
 		// write LEAF
-		target.write_all(&result.data)?;
+		target.write_all(&processed.data)?;
 
 		// update registry entry
-		result.entry.location = leaf_offset;
-		result.entry.offset = bytes;
+		processed.entry.location = leaf_offset;
+		processed.entry.offset = bytes;
 
 		// increment leaf offset
-		leaf_offset += result.data.len() as u64;
-
-		// write out registry entry
-		#[cfg(feature = "crypto")]
-		if result.sign {
-			if let Some(keypair) = &config.signing_key {
-				result.entry.flags.force_set(Flags::SIGNED_FLAG, true);
-
-				let entry_bytes = result.entry.to_bytes(true)?;
-				result.data.extend_from_slice(&entry_bytes);
-
-				// Include registry data in the signature
-				result.entry.signature = Some(keypair.sign(&result.data));
-			};
-		}
+		leaf_offset += processed.data.len() as u64;
 
 		// write to registry buffer, this one might include the Signature
-		let entry_bytes = result.entry.to_bytes(false)?;
+		let entry_bytes = processed.entry.to_bytes()?;
 		registry.write_all(&entry_bytes)?;
 
 		// Call the progress callback bound within the [`BuilderConfig`]
 		if let Some(callback) = callback.as_mut() {
-			callback(&result.entry, &result.data);
+			callback(&processed.entry, &processed.data);
 		}
 
 		Ok(())
@@ -194,10 +162,11 @@ where
 			// Spawn CPU threads
 			for chunk in chunks {
 				let queue = tx.clone();
+				let _config = &config;
 
 				s.spawn(move || {
 					for leaf in chunk {
-						let res = leaf::process_leaf(leaf, encryptor);
+						let res = leaf::process_leaf(leaf, _config, encryptor);
 						queue.send(res).unwrap();
 					}
 				});
@@ -225,7 +194,7 @@ where
 		})?;
 	} else {
 		// processed all on the main thread baby!
-		leaves.iter_mut().map(|l| leaf::process_leaf(l, encryptor.as_ref())).try_for_each(write)?;
+		leaves.iter_mut().map(|l| leaf::process_leaf(l, &config, encryptor.as_ref())).try_for_each(write)?;
 	};
 
 	// write UPDATED REGISTRY

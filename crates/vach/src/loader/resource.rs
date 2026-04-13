@@ -8,8 +8,6 @@ pub struct Resource {
 	pub data: Box<[u8]>,
 	/// The flags extracted from the archive's registry entry
 	pub flags: Flags,
-	/// The content version of stored in the registry entry
-	pub content_version: u8,
 	/// If a [`Resource's`](Resource) bytes were signed and the signature check passed
 	pub verified: bool,
 }
@@ -19,12 +17,6 @@ impl fmt::Display for Resource {
 		&self,
 		f: &mut fmt::Formatter,
 	) -> fmt::Result {
-		write!(
-			f,
-			"[Resource] size: {size} bytes, content version: {version}, flags: {flags}",
-			size = self.data.len(),
-			flags = &self.flags,
-			version = &self.content_version
-		)
+		write!(f, "[Resource] size: {size} bytes, flags: {flags}", size = self.data.len(), flags = &self.flags,)
 	}
 }

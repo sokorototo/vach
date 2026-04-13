@@ -145,7 +145,7 @@ where
 	};
 
 	// only spawn threads if `multithreaded` feature is enabled
-	if config.num_threads >= 1 && cfg!(feature = "multithreaded") {
+	if config.num_threads > 1 && cfg!(feature = "multithreaded") {
 		use std::{sync::mpsc, thread};
 
 		let (tx, rx) = mpsc::sync_channel(leaves.len());

@@ -5,7 +5,7 @@ use crate::global::flags::Flags;
 /// Settings for [`dump`](crate::writer::dump)
 #[derive(Debug, Clone)]
 pub struct BuilderConfig {
-	/// Number of threads to spawn during `Builder::dump`, defaults to 4. Set to 1 to disable multithreading.
+	/// Number of threads to spawn during `Builder::dump`. Set to 1 (default) to disable multithreading.
 	pub num_threads: usize,
 	/// Singleton flags to be written into the `Header` section of the archive.
 	pub flags: Flags,
@@ -58,7 +58,7 @@ impl BuilderConfig {
 impl Default for BuilderConfig {
 	fn default() -> BuilderConfig {
 		BuilderConfig {
-			num_threads: 4,
+			num_threads: 1,
 			flags: Flags::default(),
 			#[cfg(feature = "crypto")]
 			signing_key: None,

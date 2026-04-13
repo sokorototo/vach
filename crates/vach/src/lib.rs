@@ -11,7 +11,6 @@ A simple archive format, in Pure Rust.
 ### 🔫 Cargo Features
 - `archive`: Enables the Archive loader.
 - `builder`: Enables the Archive builder.
-- `multithreaded`: [`dump`](builder::dump) processes leaves in parallel, number of threads can be set manually using [`num_threads`](crate::builder::BuilderConfig::num_threads).
 - `compression`: Pulls `snap`, `lz4_flex` and `brotli` as dependencies and enables compression.
 - `crypto`: Enables encryption and authentication by pulling the `ed25519_dalek` and `aes_gcm` crates
 - `default`: Enables the `archive` and `builder` features.

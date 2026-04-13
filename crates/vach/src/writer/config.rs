@@ -5,8 +5,7 @@ use crate::global::flags::Flags;
 /// Settings for [`dump`](crate::writer::dump)
 #[derive(Debug, Clone)]
 pub struct BuilderConfig {
-	/// Number of threads to spawn during `Builder::dump`, defaults to 4.
-	/// Does nothing if the `multithreaded` feature is not enabled.
+	/// Number of threads to spawn during `Builder::dump`, defaults to 4. Set to 1 to disable multithreading.
 	pub num_threads: usize,
 	/// Singleton flags to be written into the `Header` section of the archive.
 	pub flags: Flags,

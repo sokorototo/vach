@@ -37,13 +37,12 @@ rayon = "1.11.0"
 
 [features]
 default = ["builder", "archive"]
-all = ["default", "compression", "crypto", "multithreaded"]
+all = ["default", "compression", "crypto"]
 
 archive = []
 builder = []
 
 crypto = ["ed25519-dalek", "aes-gcm", "simplerand"]
-multithreaded = ["builder"]
 compression = ["snap", "lz4_flex", "brotli"]
 
 [package.metadata.docs.rs]

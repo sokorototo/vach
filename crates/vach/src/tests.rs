@@ -437,7 +437,7 @@ fn test_compressors() -> InternalResult {
 }
 
 #[test]
-#[cfg(all(feature = "multithreaded", feature = "archive"))]
+#[cfg(feature = "archive")]
 fn test_batch_fetching() -> InternalResult {
 	use rayon::prelude::*;
 	use std::{collections::HashMap, io::Cursor};

@@ -115,7 +115,7 @@ fn extract_archive<T: Read + Seek + Send + Sync>(
 	);
 
 	// Extract all entries in parallel
-	let entries = archive.entries().iter().map(|(_, entry)| entry).collect::<Vec<_>>();
+	let entries = archive.entries().values().collect::<Vec<_>>();
 	let chunk_size = chunk_size.unwrap_or(if entries.len() < jobs { 8 } else { entries.len() / jobs });
 
 	thread::scope(|s| -> anyhow::Result<()> {

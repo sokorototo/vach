@@ -57,7 +57,7 @@ pub(crate) mod loader;
 pub(crate) mod writer;
 
 /// Current [`vach`](crate) spec version. increments by ten with every spec change
-pub const VERSION: u16 = 30;
+pub const VERSION: u16 = 40;
 
 /// Size of a secret key
 pub const SECRET_KEY_LENGTH: usize = 32;

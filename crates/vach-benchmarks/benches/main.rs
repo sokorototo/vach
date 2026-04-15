@@ -117,15 +117,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 			black_box(archive.fetch_mut("d3").unwrap());
 		});
 	});
-
-	drop(throughput_group);
-
-	c.bench_function("Archive::LOAD_NEW", |b| {
-		// How fast it takes to load a new archive
-		b.iter(|| {
-			black_box(Archive::with_key(&mut target, &vk).unwrap());
-		})
-	});
 }
 
 criterion_group!(benches, criterion_benchmark);

@@ -69,7 +69,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 			];
 
 			// dump
-			dump(Sink::new(), &mut leaves, &b_config, None).unwrap()
+			dump(Sink::new(), &mut leaves, Some(b_config.clone()), None).unwrap()
 		});
 	});
 
@@ -92,7 +92,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 		];
 
 		// Dump data
-		dump(&mut target, &mut leaves, &b_config, None).unwrap();
+		dump(&mut target, &mut leaves, Some(b_config.clone()), None).unwrap();
 	}
 
 	// Load data

@@ -81,11 +81,11 @@ impl CommandTrait for Subcommand {
 			Err(err) => match err {
 				InternalError::NoKeypairError => anyhow::bail!("Please provide a public key or a keypair for use in decryption or signature verification"),
 				InternalError::MalformedArchiveSource(_) => anyhow::bail!("Unable to validate the archive: {}", err),
-				err => anyhow::bail!("Encountered an error: {}", err.to_string()),
+				err => anyhow::bail!("Encountered an error: {}", err),
 			},
 		};
 
-		if archive.entries().len() != 0 {
+		if !archive.entries().is_empty() {
 			extract_archive(&archive, output, jobs, chunks_size)?;
 		}
 
@@ -103,8 +103,7 @@ fn extract_archive<T: Read + Seek + Send + Sync>(
 	let time = Instant::now();
 	fs::create_dir_all(&target_folder)?;
 
-	let total_size = archive.entries().iter().map(|(_, entry)| entry.offset).reduce(|a, b| a + b).unwrap_or(0);
-
+	let total_size = archive.entries().values().map(|entry| entry.offset).sum::<u64>();
 	let pbar = ProgressBar::new(total_size);
 
 	pbar.set_style(

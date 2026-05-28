@@ -42,10 +42,10 @@ impl CommandTrait for Subcommand {
 
 		let mut entries = archive.entries().values().collect::<Vec<_>>();
 		match sort {
-			None | Some(cli::SortSetting::Alphabetical) => entries.sort_by(|a, b| a.id.cmp(&b.id)),
-			Some(cli::SortSetting::AlphabeticalReversed) => entries.sort_by(|a, b| b.id.cmp(&a.id)),
-			Some(cli::SortSetting::SizeAscending) => entries.sort_by(|a, b| a.offset.cmp(&b.offset)),
-			Some(cli::SortSetting::SizeDescending) => entries.sort_by(|a, b| b.offset.cmp(&a.offset)),
+			None | Some(cli::SortSetting::Alphabetical) => entries.sort_by_key(|a| a.id.as_ref()),
+			Some(cli::SortSetting::AlphabeticalReversed) => entries.sort_by_key(|b| std::cmp::Reverse(b.id.as_ref())),
+			Some(cli::SortSetting::SizeAscending) => entries.sort_by_key(|a| a.offset),
+			Some(cli::SortSetting::SizeDescending) => entries.sort_by_key(|b| std::cmp::Reverse(b.offset)),
 		};
 
 		let table_entries: Vec<FileTableEntry> = entries

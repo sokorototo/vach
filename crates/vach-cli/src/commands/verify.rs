@@ -27,7 +27,7 @@ impl CommandTrait for Subcommand {
 					anyhow::bail!("Incompatible Archive Version: {}, expected: {}", v, vach::VERSION)
 				},
 				InternalError::MissingFeatureError(f) => anyhow::bail!("CLI wasn't compiled with the feature: {}", f),
-				e => anyhow::bail!("Unable to verify the archive source, error: {}", e.to_string()),
+				e => anyhow::bail!("Unable to verify the archive source, error: {}", e),
 			}
 		};
 

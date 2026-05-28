@@ -83,7 +83,7 @@ impl CommandTrait for Subcommand {
 			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};
 
-		let flags = flags.clone().map(Flags::from_bits).unwrap_or_default();
+		let flags = flags.map(Flags::from_bits).unwrap_or_default();
 		let version = tag.unwrap_or(0);
 
 		let compress_mode = compress_mode
@@ -171,18 +171,15 @@ impl CommandTrait for Subcommand {
 
 		// Extract directory inputs
 		if let Some(val) = directories {
-			let iter = val
-				.into_iter()
-				.map(|dir| {
-					walkdir::WalkDir::new(dir)
-						.max_depth(1)
-						.into_iter()
-						.map(|v| v.unwrap().into_path())
-						.filter(path_filter)
-						.filter_map(FileAutoDropper::new)
-						.map(|l| l.template(&template))
-				})
-				.flatten();
+			let iter = val.into_iter().flat_map(|dir| {
+				walkdir::WalkDir::new(dir)
+					.max_depth(1)
+					.into_iter()
+					.map(|v| v.unwrap().into_path())
+					.filter(path_filter)
+					.filter_map(FileAutoDropper::new)
+					.map(|l| l.template(&template))
+			});
 
 			leaves.extend(iter);
 		};

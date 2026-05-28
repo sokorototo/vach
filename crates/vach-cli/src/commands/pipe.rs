@@ -55,7 +55,7 @@ impl CommandTrait for Subcommand {
 			Err(err) => match err {
 				InternalError::NoKeypairError => anyhow::bail!("Please provide a public key or a keypair for use in decryption or signature verification"),
 				InternalError::MalformedArchiveSource(_) => anyhow::bail!("Unable to validate the archive: {}", err),
-				err => anyhow::bail!("Encountered an error: {}", err.to_string()),
+				err => anyhow::bail!("Encountered an error: {}", err),
 			},
 		};
 

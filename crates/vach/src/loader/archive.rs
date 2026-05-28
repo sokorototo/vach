@@ -39,7 +39,7 @@ impl<T> std::fmt::Display for Archive<T> {
 		&self,
 		f: &mut std::fmt::Formatter<'_>,
 	) -> std::fmt::Result {
-		let bytes = self.entries.values().map(|re| re.offset).reduce(|a, b| a + b).unwrap_or(0);
+		let bytes = self.entries.values().map(|re| re.offset).sum::<u64>();
 
 		write!(
 			f,

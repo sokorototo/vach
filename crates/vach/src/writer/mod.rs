@@ -176,25 +176,13 @@ where
 				});
 			}
 
-			// Process IO, read results from
-			let mut results = 0;
-
-			loop {
-				match rx.try_recv() {
-					Ok(r) => {
-						results += 1;
-						write(r)?
-					},
-					Err(e) => match e {
-						mpsc::TryRecvError::Empty => {
-							if results >= count {
-								break Ok(());
-							}
-						},
-						mpsc::TryRecvError::Disconnected => break Ok(()),
-					},
-				}
+			// Process IO by waiting for each result instead of busy-polling the channel.
+			for _ in 0..count {
+				let result = rx.recv().map_err(|_| InternalError::OtherError("worker channel disconnected".into()))?;
+				write(result)?;
 			}
+
+			Ok(())
 		})?;
 	} else {
 		// processed all on the main thread baby!

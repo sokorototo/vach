@@ -73,7 +73,12 @@ where
 	// Determines the offset at which to start writing leafs
 	let mut leaf_offset = {
 		Header::BASE_SIZE + {
+			#[cfg(feature = "crypto")]
 			let sign = config.signing_key.is_some();
+
+			#[cfg(not(feature = "crypto"))]
+			let sign = false;
+
 			leaves.iter().map(|leaf| leaf.calculate_entry_bytes(sign)).sum::<usize>()
 		}
 	} as u64;

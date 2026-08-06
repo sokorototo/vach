@@ -143,7 +143,7 @@ where
 
 		// Call the progress callback bound within the [`BuilderConfig`]
 		if let Some(callback) = callback.as_mut() {
-			callback(&processed.entry, &processed.data);
+			(*callback)(&processed.entry, &processed.data);
 		}
 
 		Ok(())
@@ -159,12 +159,10 @@ where
 			#[rustfmt::skip]
 			// if we have an insane number of threads send leafs in chunks of 8
 			let chunk_size = if config.num_threads > count { 8 } else { count / config.num_threads.max(1) };
-
-			let chunks = leaves.chunks_mut(chunk_size);
 			let encryptor = encryptor.as_ref();
 
 			// Spawn CPU threads
-			for chunk in chunks {
+			for chunk in leaves.chunks_mut(chunk_size) {
 				let queue = tx.clone();
 				let _config = &config;
 

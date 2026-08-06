@@ -72,7 +72,6 @@ impl CommandTrait for Subcommand {
 			compress_mode,
 			compression_algorithm,
 			sign,
-			tag,
 			flags,
 			jobs,
 			encrypt,
@@ -84,7 +83,6 @@ impl CommandTrait for Subcommand {
 		};
 
 		let flags = flags.map(Flags::from_bits).unwrap_or_default();
-		let version = tag.unwrap_or(0);
 
 		let compress_mode = compress_mode
 			.map(|c| match c {
@@ -129,12 +127,7 @@ impl CommandTrait for Subcommand {
 		}
 
 		// combine leaf input-template
-		let template = Leaf::<&'static [u8]>::default()
-			.compress(compress_mode)
-			.compression_algo(compression_algo)
-			.encrypt(encrypt)
-			.sign(sign)
-			.version(version);
+		let template = Leaf::<&'static [u8]>::default().compress(compress_mode).compression_algo(compression_algo).encrypt(encrypt).sign(sign);
 
 		// 2: Assemble input files
 		let mut leaves = vec![];
@@ -203,11 +196,7 @@ impl CommandTrait for Subcommand {
 		let mut temporary_file = NamedTempFile::new().unwrap();
 
 		// assemble configuration for builder
-		let config = BuilderConfig {
-			flags,
-			signing_key,
-			num_threads: jobs.try_into().expect("Number of threads cannot be zero"),
-		};
+		let config = BuilderConfig { flags, signing_key, num_threads: jobs };
 
 		// setup progress bar and callback to update it
 		let progress = ProgressBar::new(leaves.len() as _);
@@ -226,11 +215,10 @@ impl CommandTrait for Subcommand {
 		};
 
 		// 4: Write
-		let bytes_written = dump(&mut temporary_file, &mut leaves, &config, Some(&mut callback))?;
+		let bytes_written = dump(&mut temporary_file, &mut leaves, Some(config), Some(&mut callback))?;
 		temporary_file.persist(&output)?;
 
 		progress.println(format!("Generated a new archive @ {}; Bytes written: {}", output.display(), bytes_written));
-
 		progress.finish();
 
 		Ok(())

@@ -17,6 +17,6 @@ impl fmt::Display for Resource {
 		&self,
 		f: &mut fmt::Formatter,
 	) -> fmt::Result {
-		write!(f, "[Resource] size: {size} bytes, flags: {flags}", size = self.data.len(), flags = &self.flags,)
+		write!(f, "[Resource] size: {size} bytes, flags: {flags}", size = self.data.len(), flags = self.flags)
 	}
 }

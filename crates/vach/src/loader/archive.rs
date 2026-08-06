@@ -259,7 +259,7 @@ where
 
 			Ok(Resource {
 				flags: entry.flags,
-				data: buffer.into_boxed_slice(),
+				data: buffer.into(),
 				verified,
 			})
 		} else {
@@ -284,7 +284,7 @@ where
 
 			Ok(Resource {
 				flags: entry.flags,
-				data: buffer.into_boxed_slice(),
+				data: buffer.into(),
 				verified: is_secure,
 			})
 		} else {

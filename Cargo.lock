@@ -197,7 +197,7 @@ name = "c-bindings"
 version = "0.1.0"
 dependencies = [
  "cbindgen",
- "vach 0.8.0",
+ "vach",
 ]
 
 [[package]]
@@ -205,7 +205,7 @@ name = "c-bindings-fuzz"
 version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
- "vach 0.8.0",
+ "vach",
 ]
 
 [[package]]
@@ -842,15 +842,6 @@ checksum = "616ec5685824bcc94416c6d4a7a446eea774a31efd7062c8480ba6fd06d7a6e5"
 
 [[package]]
 name = "lz4_flex"
-version = "0.11.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "373f5eceeeab7925e0c1098212f2fbc4d416adec9d35051a6ab251e824c1854a"
-dependencies = [
- "twox-hash",
-]
-
-[[package]]
-name = "lz4_flex"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ef0d4ed8669f8f8826eb00dc878084aa8f253506c4fd5e8f58f5bce72ddb97e"
@@ -1443,27 +1434,12 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "vach"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0f106217e0c2f7ed9d34ce67fc86d74f7536d85c882923e50298229105b97d3"
-dependencies = [
- "aes-gcm",
- "brotli",
- "ed25519-dalek",
- "lz4_flex 0.11.6",
- "simplerand",
- "snap",
- "thiserror",
-]
-
-[[package]]
-name = "vach"
 version = "0.8.0"
 dependencies = [
  "aes-gcm",
  "brotli",
  "ed25519-dalek",
- "lz4_flex 0.13.1",
+ "lz4_flex",
  "rayon",
  "simplerand",
  "snap",
@@ -1475,7 +1451,7 @@ name = "vach-benchmarks"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "vach 0.8.0",
+ "vach",
 ]
 
 [[package]]
@@ -1488,7 +1464,7 @@ dependencies = [
  "memmap2",
  "tabled",
  "tempfile",
- "vach 0.7.2",
+ "vach",
  "walkdir",
 ]
 

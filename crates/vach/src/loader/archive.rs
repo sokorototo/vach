@@ -239,7 +239,7 @@ where
 		handle: &mut T,
 		entry: &RegistryEntry,
 	) -> InternalResult<Vec<u8>> {
-		let mut buffer = Vec::with_capacity(entry.offset as usize + 64);
+		let mut buffer = Vec::with_capacity(entry.offset as usize);
 		handle.seek(SeekFrom::Start(entry.location))?;
 
 		let mut take = handle.take(entry.offset);

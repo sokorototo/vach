@@ -20,7 +20,7 @@ const CUSTOM_FLAG_2: u32 = 0b0000_0000_0000_0000_0000_0100_0000_0000;
 const CUSTOM_FLAG_3: u32 = 0b0000_0000_0000_0000_0000_0000_1000_0000;
 const CUSTOM_FLAG_4: u32 = 0b0000_0000_0000_0000_0000_0000_0001_0000;
 
-fn leaves_from_dir<'a>(
+fn leaves_from_dir(
 	path: impl AsRef<std::path::Path>,
 	template: Option<&Leaf<&'static [u8]>>,
 ) -> InternalResult<Vec<Leaf<File>>> {
@@ -321,6 +321,7 @@ fn consolidated_test() -> InternalResult {
 	use std::{io::Cursor, time::Instant};
 
 	let mut target = Cursor::new(vec![]);
+	target.get_ref().len();
 
 	// Data to be written
 	let data_1 = b"Around The World, Fatter wetter stronker" as &[u8];
@@ -331,8 +332,10 @@ fn consolidated_test() -> InternalResult {
 	let keypair = gen_keypair();
 	let keypair_bytes = keypair.to_keypair_bytes();
 
-	let mut config = BuilderConfig::default();
-	config.signing_key = read_secret_key(&keypair_bytes[..ed25519_dalek::SECRET_KEY_LENGTH]).ok();
+	let config = BuilderConfig {
+		signing_key: read_secret_key(&keypair_bytes[..ed25519_dalek::SECRET_KEY_LENGTH]).ok(),
+		..BuilderConfig::default()
+	};
 
 	// Add data
 	let template = Leaf::<&'static [u8]>::default().encrypt(true).sign(true);
@@ -419,9 +422,9 @@ fn test_compressors() -> InternalResult {
 	assert_eq!(d2.data.len(), INPUT_LEN);
 	assert_eq!(d3.data.len(), INPUT_LEN);
 
-	assert!(&d1.data[..] == &input);
-	assert!(&d2.data[..] == &input);
-	assert!(&d3.data[..] == &input);
+	assert!(d1.data[..] == input);
+	assert!(d2.data[..] == input);
+	assert!(d3.data[..] == input);
 
 	// Compression tests
 	assert!(archive.fetch_entry("LZ4").unwrap().offset < INPUT_LEN as u64);
@@ -459,11 +462,11 @@ fn test_batch_fetching() -> InternalResult {
 	dump(&mut target, leaves.as_mut_slice(), Some(config), None)?;
 
 	let archive = Archive::new(target)?;
-	let mut resources = ids.as_slice().par_iter().map(|id| (id.as_str(), archive.fetch(&id))).collect::<HashMap<_, _>>();
+	let mut resources: HashMap<_, _> = ids.as_slice().par_iter().map(|id| (id.as_str(), archive.fetch(id))).collect();
 
 	// Tests and checks
-	assert!(resources.get("NON_EXISTENT").is_none());
-	assert!(resources.get("ERRORS").is_some());
+	assert!(!resources.contains_key("NON_EXISTENT"));
+	assert!(resources.contains_key("ERRORS"));
 
 	match resources.remove("ERRORS").unwrap() {
 		Ok(_) => {

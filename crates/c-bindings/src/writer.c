@@ -6,7 +6,7 @@
 
 void callback(void *userdata, const char *id, uintptr_t id_len,
               const char *data, uintptr_t len, uint64_t location) {
-  printf("Processed Leaf: ID=%s, Len=%lu, Location=%llu\n", id, len, location);
+  printf("Processed Leaf: ID=%s, Len=%lu, Location=%lu\n", id, len, location);
 }
 
 int main(int argc, char **argv) {

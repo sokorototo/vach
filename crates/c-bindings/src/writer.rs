@@ -37,6 +37,10 @@ fn new_leaf(
 	// get ID
 	let id = unsafe { std::ffi::CStr::from_ptr(id).to_str() }.ok()?;
 
+	if id.is_empty() {
+		return None;
+	}
+
 	// create leaf
 	let mut leaf = Leaf::new(data, id);
 
@@ -135,7 +139,7 @@ pub type v_builder_callback = Option<extern "C" fn(userdata: *mut ffi::c_void, i
 
 /// process context and dump to a preallocated buffer, buffer must at least be big enough to fit data
 #[no_mangle]
-pub extern "C" fn dump_archive_to_buffer(
+pub extern "C" fn dump_leaves_to_buffer(
 	ctx: *mut v_builder_ctx,
 	buffer: *mut u8,
 	buf_size: usize,
@@ -166,7 +170,7 @@ pub extern "C" fn dump_archive_to_buffer(
 	}
 }
 
-/// processed context and write to a file on disk
+/// process context and write to a file on disk
 #[no_mangle]
 pub extern "C" fn dump_leaves_to_file(
 	ctx: *mut v_builder_ctx,

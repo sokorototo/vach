@@ -108,7 +108,7 @@ void add_leaf_from_buffer(v_builder_ctx *ctx, const char *id, const uint8_t *dat
 void add_leaf_from_file(v_builder_ctx *ctx, const char *id, const char *path, uint32_t flags, int32_t *error_p);
 
 // process context and dump to a preallocated buffer, buffer must at least be big enough to fit data
-uint64_t dump_archive_to_buffer(v_builder_ctx *ctx, uint8_t *buffer, uintptr_t buf_size, v_builder_callback callback, void *userdata, int32_t *error_p);
+uint64_t dump_leaves_to_buffer(v_builder_ctx *ctx, uint8_t *buffer, uintptr_t buf_size, v_builder_callback callback, void *userdata, int32_t *error_p);
 
-// processed context and write to a file on disk
+// process context and write to a file on disk
 uint64_t dump_leaves_to_file(v_builder_ctx *ctx, const char *path, v_builder_callback callback, void *userdata, int32_t *error_p);

@@ -240,9 +240,11 @@ fn fetch_with_signature() -> InternalResult {
 fn decryptor_test() -> InternalResult {
 	use crate::crypto_utils::gen_keypair;
 
-	let vk = gen_keypair().verifying_key();
+	let Some(vk) = gen_keypair() else {
+		return Err(InternalError::OtherError("Unable to acquire generate keypair from OS".into()));
+	};
 
-	let crypt = Encryptor::new(&vk);
+	let crypt = Encryptor::new(&vk.verifying_key());
 	let data = vec![12, 12, 12, 12];
 
 	let (ciphertext, nonce) = crypt.encrypt(&data)?;
@@ -329,7 +331,9 @@ fn consolidated_test() -> InternalResult {
 	let data_3 = b"Fast-Acting Long-Lasting, *Bathroom Reader*" as &[u8];
 
 	// Builder definition
-	let keypair = gen_keypair();
+	let Some(keypair) = gen_keypair() else {
+		return Err(InternalError::OtherError("Unable to acquire sufficient RNG from OS".into()));
+	};
 	let keypair_bytes = keypair.to_keypair_bytes();
 
 	let config = BuilderConfig {

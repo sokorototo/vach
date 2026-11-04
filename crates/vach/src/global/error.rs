@@ -34,7 +34,7 @@ pub enum InternalError {
 	/// decryption or encryption failed
 	#[cfg(feature = "crypto")]
 	#[error("[VachError::CryptoError] {0}")]
-	CryptoError(aes_gcm::Error),
+	CryptoError(#[from] aes_gcm::Error),
 	/// attempted to set a bit in the reserved bit range, [`Flags::RESERVED_MASK`](crate::global::flags::Flags::RESERVED_MASK)
 	#[error("[VachError::RestrictedFlagAccessError] Tried to set reserved bit(s)!")]
 	RestrictedFlagAccessError,

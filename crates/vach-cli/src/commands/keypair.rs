@@ -17,7 +17,8 @@ impl super::CommandTrait for Subcommand {
 			anyhow::bail!("Wrong implementation invoked for subcommand")
 		};
 
-		let kp = gen_keypair();
+		let Some(kp) = gen_keypair() else { anyhow::bail!("Failed to generate keypair from OS rng") };
+
 		if split_key {
 			let stem = output.trim_end_matches(".kp");
 

@@ -12,9 +12,9 @@ pub use super::global::compressor::Compressor;
 
 /// Use this function to easily generate a [Keypair](https://docs.rs/ed25519-dalek/latest/ed25519_dalek/struct.Keypair.html) using `OsRng`
 #[inline(always)]
-pub fn gen_keypair() -> crypto::SigningKey {
-	let bytes = [0u8; 32].map(|_| simplerand::rand());
-	crypto::SigningKey::from_bytes(&bytes)
+pub fn gen_keypair() -> Option<crypto::SigningKey> {
+	let mut bytes = [0u8; 32];
+	getrandom::fill(&mut bytes).map(|_| crypto::SigningKey::from_bytes(&bytes)).ok()
 }
 
 /// Use this to read and parse a `Keypair` from a read stream

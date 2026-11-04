@@ -38,7 +38,7 @@ fuzz_target!(|data: (usize, std::collections::BTreeMap<String, ArbitraryVachInpu
 	let (builder_threads, data) = data;
 
 	let generate_keypair = data.values().any(|input| input.encrypt || input.sign);
-	let keypair = generate_keypair.then(gen_keypair);
+	let keypair = generate_keypair.then(gen_keypair).flatten();
 
 	let mut leaves = data.iter().map(|(key, input)| arbitrary_vach_input_to_leaf(key, input)).collect::<Vec<_>>();
 	let mut target = std::io::Cursor::new(Vec::new());

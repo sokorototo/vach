@@ -117,7 +117,9 @@ impl CommandTrait for Subcommand {
 
 		// If encrypt is true, and no keypair was found: Generate and write a new keypair to a file
 		if (encrypt || sign) && signing_key.is_none() {
-			let generated = crypto_utils::gen_keypair();
+			let Some(generated) = crypto_utils::gen_keypair() else {
+				anyhow::bail!("Failed to generate keypair from OS rng")
+			};
 
 			let mut file = File::create("keypair.kp")?;
 			file.write_all(&generated.to_keypair_bytes())?;

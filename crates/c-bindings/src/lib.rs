@@ -8,8 +8,6 @@ mod errors;
 pub mod reader;
 pub mod writer;
 
-// TODO: Document usage
-
 /// A wrapper combining `fs::File` and `io::Cursor`, for static access over the C boundary.
 /// Allowing both inner buffers and files to be used for data.
 pub(crate) enum DataSource {
